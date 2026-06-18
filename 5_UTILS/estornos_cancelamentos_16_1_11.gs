@@ -477,8 +477,13 @@ function GFP_ESTORNOS_APLICAR_DECISOES_16_1_17(payload) {
     const usedMatches = {};
 
     decisions.forEach(function(decision) {
+      var action = "";
+      var refundRow = 0;
+      var mode = "";
+      var matchKey = "";
+
       try {
-        const action = String(decision.action || "").toUpperCase();
+        action = String((decision && decision.action) || "").toUpperCase();
 
         if (action === "GROUP") {
           const refundRows = Array.isArray(decision.refundRows) ? decision.refundRows.map(Number).filter(Boolean) : [];
@@ -536,9 +541,9 @@ function GFP_ESTORNOS_APLICAR_DECISOES_16_1_17(payload) {
           return;
         }
 
-        const refundRow = Number(decision.refundRow || 0);
-        const mode = String(decision.mode || "").toUpperCase();
-        const matchKey = String(decision.matchKey || "").trim();
+        const refundRow = Number((decision && decision.refundRow) || 0);
+        const mode = String((decision && decision.mode) || "").toUpperCase();
+        const matchKey = String((decision && decision.matchKey) || "").trim();
 
         if (!refundRow || refundRow < 2) {
           out.skipped++;
@@ -662,7 +667,13 @@ function GFP_ESTORNOS_APLICAR_DECISOES_16_1_17(payload) {
 
       } catch (eItem) {
         out.skipped++;
-        out.errors.push(eItem.message);
+        out.errors.push(
+          "Decisão " + (action || "-") +
+          " | linha estorno " + (refundRow || "-") +
+          " | modo " + (mode || "-") +
+          " | par " + (matchKey || "-") +
+          ": " + (eItem && eItem.message ? eItem.message : eItem)
+        );
       }
     });
 
@@ -676,12 +687,16 @@ function GFP_ESTORNOS_APLICAR_DECISOES_16_1_17(payload) {
       out.errors.push("Aplicado, mas flush final falhou: " + eFlush.message);
     }
 
-    const msg = "Estornos/Cancelamentos aplicados: " + out.applied +
+    let msg = "Estornos/Cancelamentos aplicados: " + out.applied +
       " | conjuntos: " + out.groups +
       " | pares: " + out.exact +
       " | parciais: " + out.partial +
       " | sem par: " + out.noPair +
       (out.errors.length ? " | alertas: " + out.errors.length : "");
+
+    if (out.errors.length) {
+      msg += " | detalhe: " + out.errors.slice(0, 3).join(" || ");
+    }
 
     GFP_ESTORNOS_LOG_16_1_11_(msg);
     ss.toast(msg, "GFP Estornos");
@@ -922,7 +937,14 @@ function GFP_ESTORNOS_APPLY_REFUND_ONLY_16_1_17_(sh, headers, refundItem, option
   sh.getRange(rowNumber, headers.VALOR).setValue(valueAbs);
   sh.getRange(rowNumber, headers.TIPO).setValue("C");
   sh.getRange(rowNumber, headers.CATEGORIA).setValue(GFP_ESTORNOS_CATEGORIA_PADRAO_16_1_11);
+
+  // GFP 16.1.18.20 — correção mínima:
+  // STATUS da DB_TRANSACOES pode ter herdado validação de checkbox TRUE/FALSE.
+  // A Central de Estornos usa STATUS textual ("OK", "PENDENTE_ESTORNO_SEM_PAR").
+  // Limpa somente a validação desta célula antes de gravar o status.
+  sh.getRange(rowNumber, headers.STATUS).clearDataValidations();
   sh.getRange(rowNumber, headers.STATUS).setValue(options.status || "OK");
+
   sh.getRange(rowNumber, headers.NOTAS).setValue(note);
 
   if (metaCol) {
@@ -971,7 +993,12 @@ function GFP_ESTORNOS_APPLY_PURCHASE_EXACT_16_1_17_(sh, headers, purchaseItem, o
   sh.getRange(rowNumber, headers.VALOR).setValue(-valueAbs);
   sh.getRange(rowNumber, headers.TIPO).setValue("D");
   sh.getRange(rowNumber, headers.CATEGORIA).setValue(GFP_ESTORNOS_CATEGORIA_PADRAO_16_1_11);
+
+  // GFP 16.1.18.20 — correção mínima:
+  // limpa somente a validação da célula STATUS antes de gravar "OK".
+  sh.getRange(rowNumber, headers.STATUS).clearDataValidations();
   sh.getRange(rowNumber, headers.STATUS).setValue("OK");
+
   sh.getRange(rowNumber, headers.NOTAS).setValue(note);
 
   if (metaCol) {
@@ -1080,12 +1107,27 @@ function GFP_ESTORNOS_APPLY_PURCHASE_PARTIAL_16_1_17_(sh, headers, purchaseItem,
       canceledRow[c] = "";
     }
   }
-
   // GFP 16.1.11 ESTÁVEL SEGURO:
   // Sempre cria a linha da parte cancelada no FINAL da aba.
   // Não usamos insertRowsAfter(rowNumber), porque isso desloca linhas abaixo
   // e pode fazer decisões seguintes atingirem a linha errada.
   const insertAt = sh.getLastRow() + 1;
+
+  // GFP 16.1.18.17 — correção mínima do estorno parcial:
+  // garante que exista linha física no final da aba antes de gravar a linha
+  // automática da parte cancelada. Não altera busca, tela, decisão ou lógica.
+  if (insertAt > sh.getMaxRows()) {
+    sh.insertRowsAfter(sh.getMaxRows(), 1);
+  }
+
+  // GFP 16.1.18.20 — correção mínima:
+  // a nova linha pode herdar validação de checkbox na coluna STATUS.
+  // Como canceledRow já traz STATUS = "OK", limpamos somente a validação
+  // da célula STATUS da nova linha antes do setValues().
+  if (headers.STATUS) {
+    sh.getRange(insertAt, headers.STATUS).clearDataValidations();
+  }
+
   sh.getRange(insertAt, 1, 1, width).setValues([canceledRow]);
   GFP_ESTORNOS_LIGHT_GREEN_16_1_17_(sh, insertAt, headers);
 
@@ -1918,12 +1960,13 @@ function confirmApply() {
   google.script.run
     .withSuccessHandler(function(result) {
       const msg = result && result.message ? result.message : 'Processo concluído.';
+      const isError = result && result.ok === false;
 
       showResultOverlay(
-        'Estornos aplicados',
-        'O GFP concluiu o tratamento dos lançamentos selecionados.',
+        isError ? 'Estornos com alerta/erro' : 'Estornos aplicados',
+        isError ? 'A operação terminou com pendência técnica.' : 'O GFP concluiu o tratamento dos lançamentos selecionados.',
         msg,
-        false
+        !!isError
       );
     })
     .withFailureHandler(function(err) {

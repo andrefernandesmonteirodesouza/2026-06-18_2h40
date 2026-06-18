@@ -476,6 +476,11 @@ function GFP_DATALAKE_archiveRowsFromWork_15_2_(work, selectedRows, options) {
   }
   GFP_DATALAKE_expandSplitParents_16_0_4_(work, rowsToEvaluate);
 
+  // GFP 16.1.18.21 — performance:
+  // leitura em lote da mesa de trabalho. Evita getRange/getValues/getNotes linha por linha.
+  const allWorkValues = work.getRange(2, 1, lastRow - 1, GFP_DATALAKE_BASE_COLS_15_2).getValues();
+  const allWorkNotes = work.getRange(2, 1, lastRow - 1, GFP_DATALAKE_BASE_COLS_15_2).getNotes();
+
   const appendRows = [];
   const appendNotes = [];
   const updateRows = [];
@@ -487,9 +492,9 @@ function GFP_DATALAKE_archiveRowsFromWork_15_2_(work, selectedRows, options) {
     result.scanned++;
 
     try {
-      const rowRange = work.getRange(rowNumber, 1, 1, GFP_DATALAKE_BASE_COLS_15_2);
-      const row = rowRange.getValues()[0];
-      const rowNotes = rowRange.getNotes()[0];
+      const rowIndex = rowNumber - 2;
+      const row = allWorkValues[rowIndex] || [];
+      const rowNotes = allWorkNotes[rowIndex] || GFP_DATALAKE_blankNotes_15_2_4_(GFP_DATALAKE_BASE_COLS_15_2);
 
       const status = GFP_DATALAKE_norm_15_2_(row[8]);
 
@@ -612,8 +617,10 @@ function GFP_DATALAKE_archiveRowsFromWork_15_2_(work, selectedRows, options) {
   });
 
   // Arquiva linhas novas.
+  let startHistRow = 0;
+
   if (appendRows.length) {
-    const startHistRow = hist.getLastRow() + 1;
+    startHistRow = hist.getLastRow() + 1;
     const histRange = hist.getRange(startHistRow, 1, appendRows.length, appendRows[0].length);
 
     histRange.setValues(appendRows);
@@ -633,16 +640,58 @@ function GFP_DATALAKE_archiveRowsFromWork_15_2_(work, selectedRows, options) {
       .setValues(appendRows.map(function() { return ["ARQUIVADO"]; }));
   }
 
-  // Remove da mesa de trabalho de baixo para cima.
-  deleteRows
+  // GFP 16.1.18.21 — performance:
+  // remove da mesa em blocos contíguos, de baixo para cima.
+  // Evita centenas de chamadas deleteRow().
+  const uniqueDeleteRows = deleteRows
     .filter(function(v, i, arr) { return arr.indexOf(v) === i; })
-    .sort(function(a, b) { return b - a; })
-    .forEach(function(rowNumber) {
-      work.deleteRow(rowNumber);
+    .sort(function(a, b) { return a - b; });
+
+  const deleteGroups = [];
+
+  uniqueDeleteRows.forEach(function(rowNumber) {
+    if (!deleteGroups.length || rowNumber !== deleteGroups[deleteGroups.length - 1].end + 1) {
+      deleteGroups.push({ start: rowNumber, end: rowNumber });
+    } else {
+      deleteGroups[deleteGroups.length - 1].end = rowNumber;
+    }
+  });
+
+  deleteGroups
+    .reverse()
+    .forEach(function(g) {
+      work.deleteRows(g.start, g.end - g.start + 1);
     });
 
-  GFP_DATALAKE_formatSheets_15_2_(work, hist);
-  GFP_DATALAKE_protectHistSheet_15_2_(hist);
+  // GFP 16.1.18.21 — performance:
+  // formatação leve. Não recria filtro/proteção da planilha inteira a cada arquivamento.
+  try {
+    work.getRange("A:A").setNumberFormat("dd/mm/yyyy");
+    work.getRange("C:C").setNumberFormat("R$ #,##0.00;[Red]-R$ #,##0.00");
+
+    if (appendRows.length && startHistRow) {
+      hist.getRange(startHistRow, 1, appendRows.length, 1).setNumberFormat("dd/mm/yyyy");
+      hist.getRange(startHistRow, 3, appendRows.length, 1).setNumberFormat("R$ #,##0.00;[Red]-R$ #,##0.00");
+    }
+
+    try { hist.hideColumns(11, 9); } catch (eHideMetaFast) {}
+    try { hist.showColumns(20); } catch (eShowTFast) {}
+    try { hist.setColumnWidth(20, 120); } catch (eWidthTFast) {}
+
+    const protections = hist.getProtections(SpreadsheetApp.ProtectionType.SHEET);
+    const hasGfpProtection = protections.some(function(p) {
+      try {
+        return String(p.getDescription() || "").indexOf("GFP_HIST_PROTEGIDO") >= 0;
+      } catch (eProtectionCheck) {
+        return false;
+      }
+    });
+
+    if (!hasGfpProtection) {
+      GFP_DATALAKE_protectHistSheet_15_2_(hist);
+    }
+
+  } catch (eFastFormat) {}
 
   log.appendRow([
     new Date(),
@@ -996,13 +1045,10 @@ function GFP_DATALAKE_LOG_ARQUIVAMENTO_TO_SYS_LOGS_16_1_3_(row) {
     parts.join(" | "),
     ""
   );
-  try {
-    if (typeof GFP_DRE_VISAO_RECONSTRUIR_16_1_5 === "function") {
-      GFP_DRE_VISAO_RECONSTRUIR_16_1_5();
-    }
-  } catch (e) {
-    // Não interrompe arquivamento/desarquivamento por falha de atualização visual.
-  }
+  // GFP 16.1.18.21 — performance:
+  // Não reconstruir DRE dentro do log de arquivamento.
+  // O wrapper do menu já chama GFP_MENU_16_1_2_AFTER_ACTION_(),
+  // que atualiza as visões/DRE uma única vez após a ação.
   return true;
 }
 

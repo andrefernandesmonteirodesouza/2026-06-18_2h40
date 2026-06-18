@@ -1,0 +1,1692 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <meta charset="UTF-8">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --bg: #f8fafc;
+      --surface: #ffffff;
+      --line: #e2e8f0;
+      --line2: #cbd5e1;
+      --text: #334155;
+      --strong: #0f172a;
+      --muted: #64748b;
+      --blue: #2563eb;
+      --blue-soft: #eff6ff;
+      --green: #00994d;
+      --red: #dc2626;
+      --orange: #d97706;
+    }
+
+    * {
+      box-sizing: border-box;
+      font-family: 'Inter', sans-serif !important;
+    }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-size: 13px;
+      overflow-x: hidden;
+    }
+
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      background: rgba(255,255,255,.99);
+      border-bottom: 1px solid var(--line);
+      padding: 8px 16px 7px;
+    }
+
+    .command {
+      display: grid;
+      grid-template-columns: 84px 84px minmax(190px, 280px) auto minmax(330px, 430px) 76px;
+      gap: 8px;
+      align-items: end;
+      width: 100%;
+    }
+
+    label {
+      display: block;
+      font-size: 9px;
+      font-weight: 700;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: .04em;
+      margin-bottom: 3px;
+    }
+
+    select, button, input, textarea {
+      width: 100%;
+      height: 32px;
+      border-radius: 7px;
+      border: 1px solid var(--line2);
+      background: #fff;
+      color: var(--text);
+      font-size: 13px;
+      font-weight: 600;
+      padding: 5px 9px;
+      outline: none;
+    }
+
+    button {
+      cursor: pointer;
+      white-space: nowrap;
+    }
+
+    .tabs {
+      display: flex;
+      gap: 6px;
+      align-items: end;
+    }
+
+    .tab {
+      width: auto;
+      min-width: 86px;
+      height: 32px;
+      border-radius: 999px;
+      padding: 5px 14px;
+      background: #fff;
+      color: var(--text);
+      border: 1px solid var(--line2);
+      font-size: 13px;
+      font-weight: 600;
+    }
+
+    .tab.active {
+      color: #fff;
+      background: var(--blue);
+      border-color: var(--blue);
+    }
+
+    .refresh-btn {
+      width: 76px;
+      color: var(--blue);
+      background: var(--blue-soft);
+      border-color: #93c5fd;
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .health-mini {
+      height: 53px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: #fff;
+      padding: 7px 10px;
+      display: grid;
+      grid-template-columns: 84px 1fr;
+      gap: 10px;
+      align-items: center;
+      overflow: hidden;
+    }
+
+    .hm-label {
+      font-size: 9px;
+      color: var(--muted);
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .04em;
+      margin-bottom: 2px;
+    }
+
+    .hm-status {
+      font-size: 19px;
+      line-height: 1;
+      font-weight: 700;
+      color: var(--blue);
+      white-space: nowrap;
+    }
+
+    .hm-text {
+      font-size: 11px;
+      color: #475569;
+      line-height: 1.25;
+      overflow: hidden;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+    }
+
+    .hm-pills {
+      margin-top: 3px;
+      display: flex;
+      gap: 4px;
+      flex-wrap: nowrap;
+      overflow: hidden;
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      border: 1px solid var(--line);
+      background: #fff;
+      border-radius: 999px;
+      padding: 2px 7px;
+      font-size: 10px;
+      font-weight: 600;
+      color: #334155;
+      white-space: nowrap;
+    }
+
+    .meta-line {
+      margin-top: 4px;
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 500;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .wrap {
+      padding: 12px 16px 24px;
+      max-width: 1360px;
+      margin: 0 auto;
+    }
+
+    .section { display: none; }
+    .section.active { display: block; }
+
+    .kpis {
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      gap: 9px;
+      margin-bottom: 10px;
+    }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      box-shadow: 0 1px 2px rgba(15, 23, 42, .04);
+      overflow: hidden;
+    }
+
+    .kpi {
+      padding: 11px 12px;
+      min-height: 86px;
+    }
+
+    .kpi .label {
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: .04em;
+      color: var(--muted);
+      font-weight: 700;
+      margin-bottom: 7px;
+    }
+
+    .kpi .value {
+      font-size: 22px;
+      font-weight: 700;
+      letter-spacing: -.03em;
+      color: var(--strong);
+      line-height: 1.05;
+    }
+
+    .kpi .hint {
+      margin-top: 5px;
+      font-size: 11px;
+      color: var(--muted);
+      line-height: 1.25;
+    }
+
+    .green { color: var(--green) !important; }
+    .red { color: var(--red) !important; }
+    .orange { color: var(--orange) !important; }
+    .blue { color: var(--blue) !important; }
+
+    .row-main, .row-secondary, .close-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+      align-items: start;
+      margin-bottom: 10px;
+    }
+
+    .card-head {
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--line);
+      background: #fff;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .card-title {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--strong);
+      text-transform: uppercase;
+      letter-spacing: .02em;
+    }
+
+    .card-subtitle {
+      font-size: 11px;
+      color: var(--muted);
+      font-weight: 500;
+      margin-top: 2px;
+    }
+
+    .card-body { padding: 12px; }
+
+    .bars {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .bar-row {
+      display: grid;
+      grid-template-columns: minmax(135px, 1fr) 1fr 104px;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .series-row {
+      grid-template-columns: 56px 1fr 92px;
+    }
+
+    .bar-label {
+      font-weight: 600;
+      color: #334155;
+      font-size: 12px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .bar-bg {
+      background: #edf2f7;
+      border-radius: 999px;
+      height: 10px;
+      overflow: hidden;
+    }
+
+    .bar-fill {
+      height: 100%;
+      border-radius: 999px;
+      background: var(--blue);
+      min-width: 2px;
+    }
+
+    .bar-value {
+      font-weight: 600;
+      text-align: right;
+      font-size: 11px;
+      white-space: nowrap;
+    }
+
+    .mini-impact {
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+    }
+
+    .impact-line {
+      display: grid;
+      grid-template-columns: 86px 1fr 112px;
+      gap: 8px;
+      align-items: center;
+      padding: 7px 0;
+      border-bottom: 1px solid #eef2f7;
+    }
+
+    .impact-line:last-child { border-bottom: 0; }
+
+    .impact-date {
+      font-size: 10.5px;
+      font-weight: 600;
+      color: #475569;
+    }
+
+    .impact-desc {
+      min-width: 0;
+      font-size: 11.5px;
+      color: #1f2937;
+      font-weight: 600;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .impact-sub {
+      margin-top: 2px;
+      font-size: 10px;
+      color: var(--muted);
+      font-weight: 500;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .money {
+      font-weight: 600;
+      text-align: right;
+      white-space: nowrap;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+    }
+
+    th {
+      text-align: left;
+      padding: 8px 9px;
+      border-bottom: 1px solid var(--line);
+      background: #f8fafc;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: .03em;
+      font-size: 10px;
+      font-weight: 700;
+    }
+
+    td {
+      padding: 8px 9px;
+      border-bottom: 1px solid var(--line);
+      vertical-align: top;
+    }
+
+    tr:last-child td { border-bottom: 0; }
+
+    .desc {
+      font-weight: 600;
+      color: var(--strong);
+      max-width: 520px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .muted { color: var(--muted); }
+
+    .loading {
+      padding: 28px;
+      text-align: center;
+      color: var(--muted);
+      font-weight: 600;
+    }
+
+    .tree-node { border-bottom: 1px solid var(--line); }
+    .tree-node:last-child { border-bottom: 0; }
+
+    .tree-node > summary {
+      list-style: none;
+      cursor: pointer;
+      display: grid;
+      grid-template-columns: 20px 1fr 130px;
+      gap: 8px;
+      align-items: center;
+      padding: 10px 12px;
+      font-weight: 600;
+      color: #0f172a;
+    }
+
+    .tree-node > summary::-webkit-details-marker { display: none; }
+
+    .tree-node > summary .arrow::before {
+      content: "▶";
+      color: #94a3b8;
+      font-size: 11px;
+    }
+
+    .tree-node[open] > summary .arrow::before {
+      content: "▼";
+      color: var(--blue);
+    }
+
+    .tree-node.root-node > summary {
+      background: #f8fafc;
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .tree-node.group-node > summary { padding-left: 30px; }
+    .tree-node.detail-node > summary { padding-left: 48px; color: #334155; }
+    .tree-node.category-node > summary { padding-left: 66px; color: #475569; font-size: 12px; }
+
+    .tx-list {
+      padding: 0 10px 8px 94px;
+      background: #ffffff;
+    }
+
+    .tx-line {
+      display: grid;
+      grid-template-columns: 112px 1fr 160px 100px;
+      gap: 8px;
+      align-items: center;
+      padding: 7px 0;
+      border-top: 1px dashed #e5e7eb;
+      color: #475569;
+      font-size: 11px;
+    }
+
+    .tx-desc {
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      color: #1f2937;
+      font-weight: 600;
+    }
+
+    .status-box {
+      padding: 13px;
+      border: 1px solid var(--line);
+      background: #f8fafc;
+      border-radius: 12px;
+    }
+
+    .status-label {
+      font-size: 22px;
+      line-height: 1.1;
+      font-weight: 700;
+      letter-spacing: -.02em;
+      margin-bottom: 7px;
+    }
+
+    .status-msg {
+      font-size: 12px;
+      color: #475569;
+      line-height: 1.4;
+    }
+
+    .note-area {
+      width: 100%;
+      height: 58px;
+      resize: vertical;
+      line-height: 1.35;
+    }
+
+    .close-actions {
+      display: flex;
+      gap: 7px;
+      flex-wrap: wrap;
+      align-items: center;
+      margin-top: 8px;
+    }
+
+    .btn-close-ok {
+      width: auto;
+      min-width: 108px;
+      background: #ecfdf5;
+      color: var(--green);
+      border-color: #86efac;
+    }
+
+    .btn-close-force {
+      width: auto;
+      min-width: 112px;
+      background: #fff7ed;
+      color: var(--orange);
+      border-color: #fed7aa;
+    }
+
+    .btn-reopen {
+      width: auto;
+      min-width: 92px;
+      background: #fef2f2;
+      color: var(--red);
+      border-color: #fecaca;
+    }
+
+    .closing-item {
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: #fff;
+      padding: 8px 9px;
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 8px;
+      align-items: center;
+      margin-bottom: 6px;
+    }
+
+    .closing-title {
+      font-weight: 600;
+      color: var(--strong);
+    }
+
+    .closing-sub {
+      color: var(--muted);
+      font-size: 11px;
+      margin-top: 2px;
+    }
+
+
+    .feedback {
+      display: none;
+      margin-top: 10px;
+      border-radius: 10px;
+      padding: 9px 10px;
+      font-size: 12px;
+      font-weight: 600;
+      line-height: 1.35;
+      border: 1px solid var(--line);
+      background: #f8fafc;
+      color: #334155;
+    }
+
+    .feedback.ok {
+      display: block;
+      background: #ecfdf5;
+      border-color: #86efac;
+      color: #166534;
+    }
+
+    .feedback.warn {
+      display: block;
+      background: #fff7ed;
+      border-color: #fed7aa;
+      color: #9a3412;
+    }
+
+    .feedback.err {
+      display: block;
+      background: #fef2f2;
+      border-color: #fecaca;
+      color: #991b1b;
+    }
+
+    @media (max-width: 1180px) {
+      .command {
+        grid-template-columns: 84px 84px 1fr auto;
+      }
+
+      .health-mini {
+        grid-column: 1 / -2;
+      }
+
+      .refresh-btn {
+        grid-column: -2 / -1;
+      }
+
+      .kpis { grid-template-columns: repeat(3, 1fr); }
+      .row-main, .row-secondary, .close-grid { grid-template-columns: 1fr; }
+    }
+        .parcel-kpis {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 9px;
+      margin-bottom: 10px;
+    }
+
+    .parcel-grid {
+      display: grid;
+      grid-template-columns: 1.2fr .8fr;
+      gap: 10px;
+      margin-bottom: 10px;
+      align-items: start;
+    }
+
+    .parcel-bar-row {
+      display: grid;
+      grid-template-columns: 84px 1fr 110px;
+      gap: 8px;
+      align-items: center;
+      padding: 5px 0;
+    }
+
+    .parcel-end-line {
+      display: grid;
+      grid-template-columns: 1fr 96px 112px;
+      gap: 8px;
+      align-items: center;
+      padding: 8px 0;
+      border-bottom: 1px solid #eef2f7;
+    }
+
+    .parcel-end-line:last-child { border-bottom: 0; }
+
+    .parcel-title {
+      font-weight: 700;
+      color: var(--strong);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .parcel-sub {
+      margin-top: 2px;
+      font-size: 10.5px;
+      color: var(--muted);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .parcel-table-wrap {
+      max-height: 330px;
+      overflow: auto;
+    }
+
+    .executive-note {
+      border: 1px solid #bfdbfe;
+      background: #eff6ff;
+      color: #1e3a8a;
+      border-radius: 12px;
+      padding: 11px 12px;
+      font-size: 12px;
+      font-weight: 600;
+      line-height: 1.4;
+      margin-bottom: 10px;
+    }
+
+
+    .parcel-bar-row.clickable {
+      cursor: pointer;
+      border-radius: 10px;
+      padding-left: 6px;
+      padding-right: 6px;
+      transition: background .12s ease, transform .12s ease;
+    }
+
+    .parcel-bar-row.clickable:hover {
+      background: #eff6ff;
+      transform: translateX(2px);
+    }
+
+    .parcel-bar-row.active {
+      background: #dbeafe;
+      box-shadow: inset 3px 0 0 var(--blue);
+    }
+
+    .parcel-month-detail {
+      display: none;
+      margin-bottom: 10px;
+      border: 1px solid #bfdbfe;
+      background: #eff6ff;
+      color: #1e3a8a;
+      border-radius: 12px;
+      padding: 10px 12px;
+      font-size: 12px;
+      line-height: 1.45;
+    }
+
+    .parcel-month-detail.show {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .parcel-month-detail strong {
+      font-size: 13px;
+      color: #0f172a;
+    }
+
+    .parcel-clear-btn {
+      border: 1px solid #93c5fd;
+      background: #ffffff;
+      color: #1d4ed8;
+      border-radius: 999px;
+      padding: 7px 10px;
+      cursor: pointer;
+      font-size: 11px;
+      font-weight: 800;
+      white-space: nowrap;
+    }
+
+    .parcel-clear-btn:hover {
+      background: #dbeafe;
+    }
+
+    th.sortable {
+      cursor: pointer;
+      user-select: none;
+      white-space: nowrap;
+      transition: background .12s ease, color .12s ease;
+    }
+
+    th.sortable:hover {
+      background: #eff6ff;
+      color: var(--blue);
+    }
+
+    th.sortable.active-sort {
+      color: var(--blue);
+      background: #eff6ff;
+    }
+
+    .sort-mark {
+      display: inline-block;
+      margin-left: 4px;
+      color: var(--blue);
+      font-size: 10px;
+      font-weight: 900;
+      min-width: 10px;
+    }
+
+
+  </style>
+</head>
+
+<body>
+  <div class="topbar">
+    <div class="command">
+      <div>
+        <label>Ano</label>
+        <select id="year"></select>
+      </div>
+
+      <div>
+        <label>Mês</label>
+        <select id="month">
+          <option value="1">JAN</option>
+          <option value="2">FEV</option>
+          <option value="3">MAR</option>
+          <option value="4">ABR</option>
+          <option value="5">MAI</option>
+          <option value="6">JUN</option>
+          <option value="7">JUL</option>
+          <option value="8">AGO</option>
+          <option value="9">SET</option>
+          <option value="10">OUT</option>
+          <option value="11">NOV</option>
+          <option value="12">DEZ</option>
+        </select>
+      </div>
+
+      <div>
+        <label>Conta/Cartão</label>
+        <select id="account"></select>
+      </div>
+
+      <div class="tabs">
+        <button class="tab active" data-tab="cockpit" onclick="setTab('cockpit')">Cockpit</button>
+        <button class="tab" data-tab="dre" onclick="setTab('dre')">DRE</button>
+        <button class="tab" data-tab="parcelamentos" onclick="setTab('parcelamentos')">Parcelamentos</button>
+              </div>
+
+      <div class="health-mini" id="healthMini">
+        <div>
+          <div class="hm-label">Saúde do mês</div>
+          <div class="hm-status" id="hmStatus">—</div>
+        </div>
+        <div>
+          <div class="hm-text" id="hmText">Carregando leitura executiva...</div>
+          <div class="hm-pills" id="hmPills"></div>
+        </div>
+      </div>
+
+      <button class="refresh-btn" onclick="refresh()">Atualizar</button>
+    </div>
+
+    <div class="meta-line" id="subtitle">Regime de caixa.</div>
+  </div>
+
+  <div class="wrap">
+    <div id="globalLoading" class="card loading">Carregando Dashboard 2.0...</div>
+
+    <section id="cockpit" class="section active">
+      <div class="kpis">
+        <div class="card kpi">
+          <div class="label">Receitas</div>
+          <div class="value green" id="kpiRevenue">—</div>
+          <div class="hint">Entradas operacionais do mês-caixa.</div>
+        </div>
+
+        <div class="card kpi">
+          <div class="label">Despesas</div>
+          <div class="value red" id="kpiExpenses">—</div>
+          <div class="hint">Saídas operacionais, sem 99.* e transferências.</div>
+        </div>
+
+        <div class="card kpi">
+          <div class="label">Resultado Operacional</div>
+          <div class="value" id="kpiOperating">—</div>
+          <div class="hint">Receitas + Despesas.</div>
+        </div>
+
+        <div class="card kpi">
+          <div class="label">Fluxo Líquido</div>
+          <div class="value" id="kpiCashFlow">—</div>
+          <div class="hint">Resultado + investimentos classificados.</div>
+        </div>
+
+        <div class="card kpi">
+          <div class="label">Margem</div>
+          <div class="value blue" id="kpiMargin">—</div>
+          <div class="hint">Resultado / Receitas.</div>
+        </div>
+
+        <div class="card kpi">
+          <div class="label">Pendências</div>
+          <div class="value orange" id="kpiPending">—</div>
+          <div class="hint">Revisão + categorias a identificar.</div>
+        </div>
+      </div>
+
+      <div class="row-main">
+        <div class="card">
+          <div class="card-head">
+            <div>
+              <div class="card-title">Evolução 12 meses</div>
+              <div class="card-subtitle">Resultado operacional por mês-caixa</div>
+            </div>
+          </div>
+          <div class="card-body">
+            <div class="bars" id="seriesBars"></div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-head">
+            <div>
+              <div class="card-title">Top despesas</div>
+              <div class="card-subtitle">Maiores grupos/detalhes do mês</div>
+            </div>
+          </div>
+          <div class="card-body">
+            <div id="topExpenses"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="row-secondary">
+        <div class="card">
+          <div class="card-head">
+            <div>
+              <div class="card-title">Resultado por conta</div>
+              <div class="card-subtitle">Conta/cartão no mês-caixa</div>
+            </div>
+          </div>
+          <div class="card-body">
+            <div id="byAccount"></div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-head">
+            <div>
+              <div class="card-title">Lançamentos de maior impacto</div>
+              <div class="card-subtitle">Principais entradas/saídas do mês</div>
+            </div>
+          </div>
+          <div class="card-body">
+            <div class="mini-impact" id="impactList"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="dre" class="section">
+      <div class="card">
+        <div class="card-head">
+          <div>
+            <div class="card-title">DRE Analítico</div>
+            <div class="card-subtitle">Árvore clicável com lançamentos por categoria</div>
+          </div>
+        </div>
+        <div class="card-body" style="padding:0;">
+          <div class="tree" id="dreTree"></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="parcelamentos" class="section">
+      <div class="parcel-kpis">
+        <div class="card kpi">
+          <div class="label">Total futuro</div>
+          <div class="value red" id="parcTotalFuturo">—</div>
+          <div class="hint">Parcelas futuras em aberto.</div>
+        </div>
+
+        <div class="card kpi">
+          <div class="label">Mês selecionado</div>
+          <div class="value red" id="parcProximoMes">—</div>
+          <div class="hint">Compromisso já previsto.</div>
+        </div>
+
+        <div class="card kpi">
+          <div class="label">Parcelas futuras</div>
+          <div class="value blue" id="parcQtd">—</div>
+          <div class="hint">Quantidade de parcelas restantes.</div>
+        </div>
+
+        <div class="card kpi">
+          <div class="label">Maior cartão</div>
+          <div class="value blue" id="parcMaiorCartao">—</div>
+          <div class="hint" id="parcMaiorCartaoHint">—</div>
+        </div>
+
+        <div class="card kpi">
+          <div class="label">Maior alívio</div>
+          <div class="value green" id="parcAlivio">—</div>
+          <div class="hint">Mês em que o peso mais reduz.</div>
+        </div>
+      </div>
+
+      <div class="executive-note" id="parcelExecutiveNote">
+        Carregando leitura dos parcelamentos...
+      </div>
+
+      <div class="parcel-grid">
+        <div class="card">
+          <div class="card-head">
+            <div>
+              <div class="card-title">Compromisso por mês</div>
+              <div class="card-subtitle">Quanto já está comprometido em parcelas futuras</div>
+            </div>
+          </div>
+          <div class="card-body">
+            <div id="parcelMonthBars"></div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-head">
+            <div>
+              <div class="card-title">Quando as parcelas acabam</div>
+              <div class="card-subtitle">Próximos encerramentos de parcelamentos</div>
+            </div>
+          </div>
+          <div class="card-body">
+            <div id="parcelEndings"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-head">
+          <div>
+            <div class="card-title">Próximas parcelas</div>
+             <div id="parcelMonthDetail" class="parcel-month-detail">
+        <div>
+          <strong id="parcelMonthDetailTitle">Mês selecionado</strong>
+          <div id="parcelMonthDetailText">Clique em um mês no gráfico para ver as parcelas que compõem o total.</div>
+        </div>
+        <button class="parcel-clear-btn" onclick="clearParcelMonthFilter()">Ver todos os meses</button>
+      </div>
+
+            <div class="card-subtitle">Clique em um mês acima para ver apenas as parcelas daquele período</div>
+          </div>
+        </div>
+        <div class="parcel-table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th class="sortable" data-sort-key="due" onclick="sortParcelTableBy('due')">
+                  Vencimento <span class="sort-mark" id="sortMark_due"></span>
+                </th>
+                <th class="sortable" data-sort-key="description" onclick="sortParcelTableBy('description')">
+                  Descrição <span class="sort-mark" id="sortMark_description"></span>
+                </th>
+                <th class="sortable" data-sort-key="account" onclick="sortParcelTableBy('account')">
+                  Cartão <span class="sort-mark" id="sortMark_account"></span>
+                </th>
+                <th class="sortable" data-sort-key="installment" onclick="sortParcelTableBy('installment')">
+                  Parcela <span class="sort-mark" id="sortMark_installment"></span>
+                </th>
+                <th class="sortable" data-sort-key="category" onclick="sortParcelTableBy('category')">
+                  Categoria <span class="sort-mark" id="sortMark_category"></span>
+                </th>
+                <th class="sortable" data-sort-key="value" onclick="sortParcelTableBy('value')" style="text-align:right;">
+                  Valor <span class="sort-mark" id="sortMark_value"></span>
+                </th>
+              </tr>
+            </thead>
+
+            <tbody id="parcelTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+
+</div>
+
+<script>
+  let STATE = {
+    options: null,
+    data: null,
+    tab: "cockpit",
+    closings: [] // reservado para fases futuras
+  };
+
+  window.onload = function() {
+    google.script.run
+      .withSuccessHandler(initOptions)
+      .withFailureHandler(showError)
+      .apiDashboardV2GetOptions();
+  };
+
+  function initOptions(options) {
+    STATE.options = options || {};
+
+    const year = document.getElementById("year");
+    year.innerHTML = "";
+
+    (options.years || [new Date().getFullYear()]).forEach(function(y) {
+      const opt = document.createElement("option");
+      opt.value = y;
+      opt.textContent = y;
+      year.appendChild(opt);
+    });
+
+    year.value = options.defaultYear || new Date().getFullYear();
+    document.getElementById("month").value = options.defaultMonth || (new Date().getMonth() + 1);
+
+    const account = document.getElementById("account");
+    account.innerHTML = '<option value="Tudo">Tudo</option>';
+
+    (options.accounts || []).forEach(function(a) {
+      const opt = document.createElement("option");
+      opt.value = a;
+      opt.textContent = a;
+      account.appendChild(opt);
+    });
+
+    ["year", "month", "account"].forEach(function(id) {
+      document.getElementById(id).addEventListener("change", refresh);
+    });
+
+    refresh();
+  }
+
+  function getFilters() {
+    return {
+      year: Number(document.getElementById("year").value),
+      month: Number(document.getElementById("month").value),
+      account: document.getElementById("account").value || "Tudo",
+      status: "Tudo"
+    };
+  }
+
+  function refresh() {
+    document.getElementById("globalLoading").style.display = "block";
+
+    google.script.run
+      .withSuccessHandler(render)
+      .withFailureHandler(showError)
+      .apiDashboardV2GetData(getFilters());
+  }
+
+  function render(data) {
+    STATE.data = data;
+    document.getElementById("globalLoading").style.display = "none";
+
+    if (!data || data.ok === false) {
+      showError(data && data.error ? data.error : "Erro ao carregar dashboard.");
+      return;
+    }
+
+    const sourceText = data.meta && (data.meta.sourceWorkRows != null || data.meta.sourceHistRows != null)
+      ? " | Mesa: " + (data.meta.sourceWorkRows || 0) + " · Histórico: " + (data.meta.sourceHistRows || 0)
+      : "";
+
+    document.getElementById("subtitle").textContent =
+      "Regime de caixa — " + data.filters.monthLabel +
+      " | " + data.meta.selectedRows + " linha(s) filtrada(s)" +
+      sourceText +
+      " | 99.* e T fora da DRE";
+
+    renderKpis(data);
+    renderHealthMini(data);
+    renderSeries(data);
+    renderTopLists(data);
+    renderImpactList(data);
+    renderDre(data);
+    renderParcelamentos(data.parcelamentos || {});
+
+  }
+
+  function renderKpis(data) {
+    setMoney("kpiRevenue", data.kpis.revenue);
+    setMoney("kpiExpenses", data.kpis.expenses);
+    setMoney("kpiOperating", data.kpis.operatingResult);
+    setMoney("kpiCashFlow", data.kpis.cashFlow);
+
+    document.getElementById("kpiOperating").className = "value " + (data.kpis.operatingResult >= 0 ? "green" : "red");
+    document.getElementById("kpiCashFlow").className = "value " + (data.kpis.cashFlow >= 0 ? "green" : "red");
+
+    document.getElementById("kpiMargin").textContent = pct(data.kpis.margin);
+    document.getElementById("kpiPending").textContent = String((data.quality.pending || 0) + (data.quality.unidentified || 0));
+  }
+
+  function renderHealthMini(data) {
+    const h = data.health || {};
+    const status = document.getElementById("hmStatus");
+    const label = h.label || "—";
+
+    status.textContent = label;
+    status.className = "hm-status";
+    if (h.tone === "success") status.classList.add("green");
+    if (h.tone === "good") status.classList.add("blue");
+    if (h.tone === "warning") status.classList.add("orange");
+    if (h.tone === "danger") status.classList.add("red");
+
+    document.getElementById("hmText").textContent = h.message || "";
+
+    document.getElementById("hmPills").innerHTML =
+      '<span class="pill">Margem: <strong>' + pct(data.kpis.margin) + '</strong></span>' +
+      '<span class="pill">Pend.: <strong>' + (data.quality.pending || 0) + '</strong></span>' +
+      '<span class="pill">A ident.: <strong>' + (data.quality.unidentified || 0) + '</strong></span>';
+  }
+
+  function renderSeries(data) {
+    const box = document.getElementById("seriesBars");
+    const rows = data.series || [];
+    const max = Math.max.apply(null, rows.map(function(r) { return Math.abs(r.result); }).concat([1]));
+
+    box.innerHTML = rows.map(function(r) {
+      const w = Math.max(3, Math.round((Math.abs(r.result) / max) * 100));
+      const color = r.result >= 0 ? "var(--green)" : "var(--red)";
+
+      return '' +
+        '<div class="bar-row series-row">' +
+          '<div class="bar-label">' + esc(r.label) + '</div>' +
+          '<div class="bar-bg"><div class="bar-fill" style="width:' + w + '%; background:' + color + ';"></div></div>' +
+          '<div class="bar-value ' + (r.result >= 0 ? "green" : "red") + '">' + fmt(r.result) + '</div>' +
+        '</div>';
+    }).join("");
+  }
+
+  function renderTopLists(data) {
+    renderBarList("topExpenses", data.topExpenses || [], 12);
+    renderBarList("byAccount", data.byAccount || [], 8);
+  }
+
+  function renderBarList(id, items, limit) {
+    const box = document.getElementById(id);
+    items = (items || []).slice(0, limit || 10);
+
+    if (!items.length) {
+      box.innerHTML = '<div class="muted">Sem dados para o filtro.</div>';
+      return;
+    }
+
+    const max = Math.max.apply(null, items.map(function(i) { return Math.abs(i.value); }).concat([1]));
+
+    box.innerHTML = '<div class="bars">' + items.map(function(i) {
+      const w = Math.max(3, Math.round((Math.abs(i.value) / max) * 100));
+      const color = i.value >= 0 ? "var(--green)" : "var(--red)";
+
+      return '' +
+        '<div class="bar-row">' +
+          '<div class="bar-label" title="' + esc(i.label) + '">' + esc(i.label) + '</div>' +
+          '<div class="bar-bg"><div class="bar-fill" style="width:' + w + '%; background:' + color + ';"></div></div>' +
+          '<div class="bar-value ' + (i.value >= 0 ? "green" : "red") + '">' + fmt(i.value) + '</div>' +
+        '</div>';
+    }).join("") + '</div>';
+  }
+
+  function renderImpactList(data) {
+    const box = document.getElementById("impactList");
+    const rows = (data.transactions || []).slice(0, 8);
+
+    if (!rows.length) {
+      box.innerHTML = '<div class="muted">Sem lançamentos para o filtro.</div>';
+      return;
+    }
+
+    box.innerHTML = rows.map(function(r) {
+      return '' +
+        '<div class="impact-line">' +
+          '<div class="impact-date">' + esc(r.date || "") + '<br><span class="muted">L' + esc(r.rowNumber || "") + '</span></div>' +
+          '<div style="min-width:0;">' +
+            '<div class="impact-desc" title="' + esc(r.description || "") + '">' + esc(r.description || "") + '</div>' +
+            '<div class="impact-sub">' + esc(r.account || "") + ' · ' + esc(r.category || "") + '</div>' +
+          '</div>' +
+          '<div class="money ' + moneyClass(r.value) + '">' + fmt(r.value) + '</div>' +
+        '</div>';
+    }).join("");
+  }
+
+  function renderDre(data) {
+    const root = document.getElementById("dreTree");
+    const dre = data.dre || {};
+    const order = ["Receitas", "Despesas", "Investimentos"];
+
+    root.innerHTML = order.map(function(key) {
+      const node = dre[key] || { label: key, value: 0, groups: {} };
+      if (key === "Investimentos" && Math.abs(Number(node.value || 0)) < 0.0001) return "";
+      return renderDreRootNode(key, node);
+    }).join("");
+  }
+
+  function renderDreRootNode(key, node) {
+    const groups = Object.keys(node.groups || {}).sort();
+
+    let html = '';
+    html += '<details class="tree-node root-node" open>';
+    html += '<summary><span class="arrow"></span><span>' + esc(node.label || key) + '</span><span class="money ' + moneyClass(node.value) + '">' + fmt(node.value) + '</span></summary>';
+
+    groups.forEach(function(g) { html += renderDreGroupNode(node.groups[g]); });
+
+    html += '</details>';
+    return html;
+  }
+
+  function renderDreGroupNode(group) {
+    const details = Object.keys(group.details || {}).sort();
+
+    let html = '';
+    html += '<details class="tree-node group-node">';
+    html += '<summary><span class="arrow"></span><span>' + esc(group.label) + '</span><span class="money ' + moneyClass(group.value) + '">' + fmt(group.value) + '</span></summary>';
+
+    details.forEach(function(d) { html += renderDreDetailNode(group.details[d]); });
+
+    html += '</details>';
+    return html;
+  }
+
+  function renderDreDetailNode(detail) {
+    const categories = Object.keys(detail.categories || {}).sort();
+
+    let html = '';
+    html += '<details class="tree-node detail-node">';
+    html += '<summary><span class="arrow"></span><span>' + esc(detail.label) + '</span><span class="money ' + moneyClass(detail.value) + '">' + fmt(detail.value) + '</span></summary>';
+
+    categories.forEach(function(c) {
+      const cat = normalizeCategoryNode(detail.categories[c], c);
+      html += renderDreCategoryNode(cat);
+    });
+
+    html += '</details>';
+    return html;
+  }
+
+  function normalizeCategoryNode(cat, fallbackLabel) {
+    if (cat && typeof cat === "object") {
+      return {
+        label: cat.label || fallbackLabel,
+        value: Number(cat.value || 0),
+        transactions: Array.isArray(cat.transactions) ? cat.transactions : []
+      };
+    }
+
+    return { label: fallbackLabel, value: Number(cat || 0), transactions: [] };
+  }
+
+  function renderDreCategoryNode(cat) {
+    let html = '';
+    html += '<details class="tree-node category-node">';
+    html += '<summary><span class="arrow"></span><span>' + esc(cat.label) + '</span><span class="money ' + moneyClass(cat.value) + '">' + fmt(cat.value) + '</span></summary>';
+
+    if (cat.transactions && cat.transactions.length) {
+      html += '<div class="tx-list">';
+      html += cat.transactions
+        .sort(function(a, b) { return Math.abs(Number(b.value || 0)) - Math.abs(Number(a.value || 0)); })
+        .map(function(tx) {
+          return '<div class="tx-line">' +
+            '<div>' + esc(tx.date || "") + ' <span class="muted">L' + esc(tx.rowNumber || "") + '</span></div>' +
+            '<div class="tx-desc" title="' + esc(tx.description || "") + '">' + esc(tx.description || "") + '</div>' +
+            '<div class="muted">' + esc(tx.account || "") + '</div>' +
+            '<div class="money ' + moneyClass(tx.value) + '">' + fmt(tx.value) + '</div>' +
+          '</div>';
+        }).join('');
+      html += '</div>';
+    } else {
+      html += '<div class="tx-list"><div class="muted" style="padding:7px 0;">Sem lançamentos detalhados para esta categoria.</div></div>';
+    }
+
+    html += '</details>';
+    return html;
+  }
+
+    
+  function renderParcelamentos(parcel) {
+    parcel = parcel || {};
+    window.GFP_PARCELAMENTOS_DATA = parcel;
+    window.GFP_PARCELAMENTOS_MES_ATIVO = "";
+    window.GFP_PARCELAMENTOS_TABLE_ROWS = [];
+    window.GFP_PARCELAMENTOS_SORT = window.GFP_PARCELAMENTOS_SORT || { key: "due", dir: "asc" };
+
+    if (parcel.empty) {
+      document.getElementById("parcTotalFuturo").textContent = fmt(0);
+      document.getElementById("parcProximoMes").textContent = fmt(0);
+      document.getElementById("parcQtd").textContent = "0";
+      document.getElementById("parcMaiorCartao").textContent = "—";
+      document.getElementById("parcMaiorCartaoHint").textContent = "Sem parcelas futuras.";
+      document.getElementById("parcAlivio").textContent = "—";
+      document.getElementById("parcelExecutiveNote").textContent = "Não encontrei parcelas futuras para o filtro selecionado.";
+      document.getElementById("parcelMonthBars").innerHTML = '<div class="muted">Sem dados para exibir.</div>';
+      document.getElementById("parcelEndings").innerHTML = '<div class="muted">Sem encerramentos previstos.</div>';
+      document.getElementById("parcelTableBody").innerHTML = '<tr><td colspan="6" class="muted">Sem parcelas futuras.</td></tr>';
+      hideParcelMonthDetail();
+      updateParcelSortIndicators();
+      return;
+    }
+
+    const k = parcel.kpis || {};
+
+    document.getElementById("parcTotalFuturo").textContent = fmt(k.totalFuture || 0);
+    document.getElementById("parcProximoMes").textContent = fmt(k.nextMonthTotal || 0);
+    document.getElementById("parcQtd").textContent = String(k.totalInstallments || 0);
+    document.getElementById("parcMaiorCartao").textContent = k.biggestCard || "—";
+    document.getElementById("parcMaiorCartaoHint").textContent = fmt(k.biggestCardValue || 0) + " em aberto";
+    document.getElementById("parcAlivio").textContent = k.reliefMonth || "—";
+
+    const note = [];
+    note.push("A partir de " + (parcel.startMonthLabel || "mês selecionado") + ", há " + fmt(k.totalFuture || 0) + " em parcelas futuras previstas.");
+    if (k.biggestCard && k.biggestCard !== "—") note.push("O cartão com maior peso é " + k.biggestCard + ".");
+    if (k.reliefMonth && k.reliefMonth !== "—" && Number(k.reliefValue || 0) > 0) note.push("O maior alívio aparece em " + k.reliefMonth + ", com redução aproximada de " + fmt(k.reliefValue) + ".");
+    document.getElementById("parcelExecutiveNote").textContent = note.join(" ");
+
+    renderParcelMonthBars(parcel.series || []);
+    renderParcelEndings(parcel.endings || []);
+    renderParcelTable(parcel.installments || []);
+    hideParcelMonthDetail();
+  }
+
+
+
+  function renderParcelMonthBars(rows) {
+    const box = document.getElementById("parcelMonthBars");
+
+    if (!rows.length) {
+      box.innerHTML = '<div class="muted">Sem dados para exibir.</div>';
+      return;
+    }
+
+    const max = Math.max.apply(null, rows.map(function(r) { return Number(r.value || 0); }).concat([1]));
+
+    box.innerHTML = rows.map(function(r) {
+      const w = Math.max(3, Math.round((Number(r.value || 0) / max) * 100));
+      const monthKey = esc(r.monthKey || "");
+
+      return '' +
+        '<div class="parcel-bar-row clickable" data-month="' + monthKey + '" onclick="selectParcelMonth(\'' + monthKey + '\')">' +
+          '<div class="bar-label">' + esc(r.label || "") + '</div>' +
+          '<div class="bar-bg"><div class="bar-fill" style="width:' + w + '%; background:var(--blue);"></div></div>' +
+          '<div class="bar-value red">' + fmt(r.value || 0) + '</div>' +
+        '</div>';
+    }).join("");
+  }
+
+
+
+  function selectParcelMonth(monthKey) {
+    const parcel = window.GFP_PARCELAMENTOS_DATA || {};
+    const all = parcel.installments || [];
+
+    if (!monthKey) return;
+
+    window.GFP_PARCELAMENTOS_MES_ATIVO = monthKey;
+
+    const rows = all.filter(function(r) {
+      return r.monthKey === monthKey;
+    });
+
+    renderParcelTable(rows);
+    showParcelMonthDetail(monthKey, rows);
+    highlightParcelMonth(monthKey);
+  }
+
+
+  function clearParcelMonthFilter() {
+    const parcel = window.GFP_PARCELAMENTOS_DATA || {};
+    window.GFP_PARCELAMENTOS_MES_ATIVO = "";
+
+    renderParcelTable(parcel.installments || []);
+    hideParcelMonthDetail();
+    highlightParcelMonth("");
+  }
+
+  function showParcelMonthDetail(monthKey, rows) {
+    rows = rows || [];
+
+    const box = document.getElementById("parcelMonthDetail");
+    const title = document.getElementById("parcelMonthDetailTitle");
+    const text = document.getElementById("parcelMonthDetailText");
+
+    if (!box || !title || !text) return;
+
+    const total = rows.reduce(function(acc, r) {
+      return acc + Math.abs(Number(r.value || 0));
+    }, 0);
+
+    const cards = {};
+    rows.forEach(function(r) {
+      const card = r.account || "Sem cartão";
+      cards[card] = (cards[card] || 0) + Math.abs(Number(r.value || 0));
+    });
+
+    const topCard = Object.keys(cards)
+      .map(function(k) { return { card: k, value: cards[k] }; })
+      .sort(function(a, b) { return b.value - a.value; })[0];
+
+    const monthLabel = rows[0] && rows[0].monthLabel ? rows[0].monthLabel : monthKey;
+
+    title.textContent = "Parcelas de " + monthLabel;
+
+    text.textContent =
+      rows.length + " parcela(s), totalizando " + fmt(total) +
+      (topCard ? ". Maior peso: " + topCard.card + " (" + fmt(topCard.value) + ")." : ".");
+
+    box.classList.add("show");
+  }
+
+  function hideParcelMonthDetail() {
+    const box = document.getElementById("parcelMonthDetail");
+    if (box) box.classList.remove("show");
+  }
+
+  function highlightParcelMonth(monthKey) {
+    const rows = document.querySelectorAll(".parcel-bar-row[data-month]");
+
+    rows.forEach(function(el) {
+      if (monthKey && el.getAttribute("data-month") === monthKey) {
+        el.classList.add("active");
+      } else {
+        el.classList.remove("active");
+      }
+    });
+  }
+
+
+
+  function renderParcelEndings(rows) {
+    const box = document.getElementById("parcelEndings");
+
+    rows = (rows || []).slice(0, 12);
+
+    if (!rows.length) {
+      box.innerHTML = '<div class="muted">Sem encerramentos previstos.</div>';
+      return;
+    }
+
+    box.innerHTML = rows.map(function(r) {
+      return '' +
+        '<div class="parcel-end-line">' +
+          '<div style="min-width:0;">' +
+            '<div class="parcel-title" title="' + esc(r.description || "") + '">' + esc(r.description || "") + '</div>' +
+            '<div class="parcel-sub">' + esc(r.account || "") + ' · ' + esc(r.current || "") + '/' + esc(r.total || "") + ' · ' + esc(r.category || "") + '</div>' +
+          '</div>' +
+          '<div class="muted" style="font-weight:700;">' + esc(r.finalMonthLabel || "") + '</div>' +
+          '<div class="money red">' + fmt(r.monthlyValue || 0) + '</div>' +
+        '</div>';
+    }).join("");
+  }
+
+
+  function renderParcelTable(rows) {
+    rows = (rows || []).slice();
+
+    window.GFP_PARCELAMENTOS_TABLE_ROWS = rows;
+
+    rows = sortParcelRows(rows);
+
+    const tbody = document.getElementById("parcelTableBody");
+
+    rows = rows.slice(0, 120);
+
+    if (!rows.length) {
+      tbody.innerHTML = '<tr><td colspan="6" class="muted">Sem parcelas futuras.</td></tr>';
+      updateParcelSortIndicators();
+      return;
+    }
+
+    tbody.innerHTML = rows.map(function(r) {
+      return '' +
+        '<tr>' +
+          '<td>' + esc(r.dueLabel || "") + '<br><span class="muted">' + esc(r.monthLabel || "") + '</span></td>' +
+          '<td><div class="desc" title="' + esc(r.description || "") + '">' + esc(r.description || "") + '</div></td>' +
+          '<td>' + esc(r.account || "") + '</td>' +
+          '<td>' + esc(r.installmentLabel || "") + '</td>' +
+          '<td class="muted">' + esc(r.category || "") + '</td>' +
+          '<td class="money red">' + fmt(r.value || 0) + '</td>' +
+        '</tr>';
+    }).join("");
+
+    updateParcelSortIndicators();
+  }
+
+
+
+  function sortParcelTableBy(key) {
+    const current = window.GFP_PARCELAMENTOS_SORT || { key: "due", dir: "asc" };
+
+    if (current.key === key) {
+      current.dir = current.dir === "asc" ? "desc" : "asc";
+    } else {
+      current.key = key;
+      current.dir = key === "value" ? "desc" : "asc";
+    }
+
+    window.GFP_PARCELAMENTOS_SORT = current;
+
+    renderParcelTable(window.GFP_PARCELAMENTOS_TABLE_ROWS || []);
+  }
+
+  function sortParcelRows(rows) {
+    const sort = window.GFP_PARCELAMENTOS_SORT || { key: "due", dir: "asc" };
+    const key = sort.key || "due";
+    const dir = sort.dir === "desc" ? -1 : 1;
+
+    return (rows || []).slice().sort(function(a, b) {
+      const av = getParcelSortValue(a, key);
+      const bv = getParcelSortValue(b, key);
+
+      if (typeof av === "number" && typeof bv === "number") {
+        return (av - bv) * dir;
+      }
+
+      return String(av || "").localeCompare(String(bv || ""), "pt-BR", {
+        numeric: true,
+        sensitivity: "base"
+      }) * dir;
+    });
+  }
+
+  function getParcelSortValue(row, key) {
+    row = row || {};
+
+    if (key === "due") {
+      return String(row.dueKey || row.monthKey || row.dueLabel || "");
+    }
+
+    if (key === "description") {
+      return String(row.description || "");
+    }
+
+    if (key === "account") {
+      return String(row.account || "");
+    }
+
+    if (key === "installment") {
+      const label = String(row.installmentLabel || "");
+      const m = label.match(/^(\d+)\/(\d+)/);
+      if (m) return Number(m[1]);
+      return label;
+    }
+
+    if (key === "category") {
+      return String(row.category || "");
+    }
+
+    if (key === "value") {
+      return Math.abs(Number(row.value || row.valueAbs || 0));
+    }
+
+    return "";
+  }
+
+  function updateParcelSortIndicators() {
+    const sort = window.GFP_PARCELAMENTOS_SORT || { key: "due", dir: "asc" };
+    const keys = ["due", "description", "account", "installment", "category", "value"];
+
+    keys.forEach(function(k) {
+      const mark = document.getElementById("sortMark_" + k);
+      const th = document.querySelector('th[data-sort-key="' + k + '"]');
+
+      if (mark) {
+        mark.textContent = sort.key === k ? (sort.dir === "asc" ? "▲" : "▼") : "";
+      }
+
+      if (th) {
+        th.classList.toggle("active-sort", sort.key === k);
+      }
+    });
+  }
+
+
+
+
+
+  function setTab(tab) {
+    STATE.tab = tab;
+
+    document.querySelectorAll(".tab").forEach(function(b) {
+      b.classList.toggle("active", b.dataset.tab === tab);
+    });
+
+    document.querySelectorAll(".section").forEach(function(s) {
+      s.classList.toggle("active", s.id === tab);
+    });
+  }
+
+  function showError(err) {
+    document.getElementById("globalLoading").style.display = "block";
+    document.getElementById("globalLoading").innerHTML =
+      '<div style="color:#dc2626;">Erro: ' + esc(err && err.message ? err.message : String(err || "erro desconhecido")) + '</div>';
+  }
+
+  function monthLabel(mk) {
+    const names = ["JAN", "FEV", "MAR", "ABR", "MAI", "JUN", "JUL", "AGO", "SET", "OUT", "NOV", "DEZ"];
+    const m = String(mk || "").match(/^(20\d{2})-(\d{2})$/);
+    return m ? names[Number(m[2]) - 1] + "/" + m[1] : mk;
+  }
+
+  function fmt(value) {
+    const n = Number(value || 0);
+    return n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+  }
+
+  function pct(value) {
+    const n = Number(value || 0);
+    return (n * 100).toLocaleString("pt-BR", { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + "%";
+  }
+
+  function setMoney(id, value) {
+    document.getElementById(id).textContent = fmt(value);
+  }
+
+  function moneyClass(value) {
+    return Number(value || 0) >= 0 ? "green" : "red";
+  }
+
+  function esc(s) {
+    return String(s == null ? "" : s)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#039;");
+  }
+</script>
+</body>
+</html>

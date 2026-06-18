@@ -1,0 +1,1571 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <meta charset="UTF-8">
+  <style>
+    :root {
+      --green: #0f8a3b;
+      --green-soft: #eefaf2;
+      --blue: #2563eb;
+      --blue-soft: #eff6ff;
+      --red: #e11d48;
+      --bg: #f3f4f6;
+      --card: #ffffff;
+      --line: #e5e7eb;
+      --line2: #d9dee7;
+      --text: #111827;
+      --muted: #6b7280;
+      --chip: #f3f4f6;
+      --selected: #eef6ff;
+      --purple: #7c3aed;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: Arial, Helvetica, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      font-size: 12px;
+    }
+
+    button {
+      border: 1px solid var(--line2);
+      border-radius: 8px;
+      padding: 5px 8px;
+      cursor: pointer;
+      font-weight: 800;
+      font-size: 10.5px;
+      background: #ffffff;
+      color: #374151;
+      white-space: nowrap;
+      box-shadow: none;
+      height: 29px;
+      line-height: 1;
+    }
+
+    button:hover { background: #f9fafb; }
+
+    button.primary {
+      border-color: #93c5fd;
+      color: var(--blue);
+      background: var(--blue-soft);
+    }
+
+    button.success {
+      border-color: #86efac;
+      color: var(--green);
+      background: var(--green-soft);
+    }
+
+    button.purple {
+      border-color: #ddd6fe;
+      color: var(--purple);
+      background: #f5f3ff;
+    }
+
+    button.danger {
+      border-color: #fecdd3;
+      color: var(--red);
+      background: #fff1f2;
+    }
+
+    html, body {
+      overflow-x: hidden;
+    }
+
+    .command-wrap {
+      position: sticky;
+      top: 0;
+      z-index: 30;
+      background: rgba(255, 255, 255, .98);
+      border-bottom: 1px solid var(--line);
+      padding: 6px 10px 5px;
+      backdrop-filter: blur(8px);
+      width: 100%;
+      max-width: 100%;
+    }
+
+    .commandbar {
+      display: grid;
+      grid-template-columns: minmax(150px, 1fr) minmax(130px, 170px) 96px 96px 96px 88px 62px auto;
+      gap: 5px;
+      align-items: end;
+      width: 100%;
+      max-width: 100%;
+      margin: 0;
+    }
+
+    .brandbox,
+    .brandbox .logo {
+      display: none;
+    }
+
+    .select-all-label {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      color: #374151;
+      font-size: 10.5px;
+      font-weight: 800;
+      text-transform: none;
+      letter-spacing: 0;
+      margin: 0;
+      cursor: pointer;
+    }
+
+    .select-all-label input,
+    .pill-check input {
+      width: 13px;
+      height: 13px;
+      accent-color: var(--green);
+      margin: 0;
+    }
+
+    .pill-check {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      cursor: pointer;
+      font-weight: 800;
+    }
+
+    .field label {
+      font-size: 8px;
+      color: var(--muted);
+      font-weight: 900;
+      text-transform: uppercase;
+      display: block;
+      margin-bottom: 2px;
+      letter-spacing: .04em;
+    }
+
+    input, select {
+      width: 100%;
+      min-width: 0;
+      border: 1px solid #d1d5db;
+      border-radius: 6px;
+      padding: 5px 6px;
+      font-size: 11.5px;
+      background: #ffffff;
+      color: var(--text);
+      outline: none;
+      height: 29px;
+    }
+
+    input:focus, select:focus {
+      border-color: #93c5fd;
+      box-shadow: 0 0 0 3px rgba(37,99,235,.10);
+    }
+
+    .actions-top {
+      display: flex;
+      gap: 5px;
+      justify-content: flex-end;
+      align-items: end;
+      min-width: 0;
+    }
+
+    .statusline {
+      width: 100%;
+      max-width: 100%;
+      margin: 4px 0 0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      min-height: 20px;
+      color: var(--muted);
+      font-size: 10.5px;
+      overflow: hidden;
+    }
+
+    .statsline {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-wrap: wrap;
+      flex: 0 0 auto;
+    }
+
+    .pill {
+      background: #ffffff;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      padding: 2px 7px;
+      font-size: 10.5px;
+      color: #4b5563;
+      white-space: nowrap;
+    }
+
+    .pill strong {
+      color: var(--blue);
+      margin-left: 4px;
+    }
+
+    .queue-pill {
+      background: var(--green-soft);
+      border-color: #bbf7d0;
+      color: var(--green);
+      font-weight: 800;
+    }
+
+    .multi {
+      position: relative;
+    }
+
+    .multi-button {
+      width: 100%;
+      text-align: left;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      padding-right: 20px;
+      position: relative;
+      background: #fff;
+      color: #111827;
+      font-weight: 700;
+    }
+
+    .multi-button::after {
+      content: "▾";
+      position: absolute;
+      right: 8px;
+      top: 7px;
+      color: var(--muted);
+    }
+
+    .multi-menu {
+      display: none;
+      position: absolute;
+      z-index: 60;
+      top: 33px;
+      left: 0;
+      min-width: 270px;
+      max-height: 260px;
+      overflow: auto;
+      background: #ffffff;
+      border: 1px solid var(--line2);
+      border-radius: 8px;
+      box-shadow: 0 12px 30px rgba(17,24,39,.16);
+      padding: 6px;
+    }
+
+    .multi.open .multi-menu {
+      display: block;
+    }
+
+    .multi-option {
+      display: flex;
+      gap: 7px;
+      align-items: center;
+      padding: 6px 7px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 12px;
+      color: #374151;
+      text-transform: none;
+      letter-spacing: 0;
+      font-weight: 600;
+      margin: 0;
+    }
+
+    .multi-option:hover { background: #f3f4f6; }
+
+    .multi-option input {
+      width: 14px;
+      height: 14px;
+      margin: 0;
+      accent-color: var(--green);
+    }
+
+    .wrap {
+      padding: 9px 10px 22px;
+      width: 100%;
+      max-width: 100%;
+      overflow-x: hidden;
+    }
+
+    .panel {
+      max-width: 1040px;
+      margin: 0 auto;
+      overflow-x: hidden;
+    }
+
+    .list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .item {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 7px;
+      padding: 9px 10px;
+      box-shadow: 0 1px 2px rgba(17,24,39,.05);
+      outline: none;
+      transition: border-color .12s ease, box-shadow .12s ease, background .12s ease, opacity .10s ease, transform .10s ease;
+    }
+
+    .item:hover {
+      border-color: #cbd5e1;
+      box-shadow: 0 2px 7px rgba(17,24,39,.075);
+    }
+
+    .item:focus {
+      border-color: #93c5fd;
+      box-shadow: 0 0 0 3px rgba(37,99,235,.10);
+    }
+
+    .item.selected {
+      background: var(--selected);
+      border-color: #93c5fd;
+    }
+
+    .item.removing {
+      opacity: 0;
+      transform: translateX(10px);
+    }
+
+    .card-grid {
+      display: grid;
+      grid-template-columns: 28px 1fr 105px;
+      gap: 9px;
+      align-items: start;
+    }
+
+    .checkwrap {
+      padding-top: 22px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .rowcheck {
+      width: 16px;
+      height: 16px;
+      accent-color: var(--green);
+      cursor: pointer;
+    }
+
+    .rowcheck:disabled {
+      opacity: .35;
+      cursor: not-allowed;
+    }
+
+    .content { min-width: 0; }
+
+    .top-meta {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 5px;
+      color: var(--muted);
+      font-size: 10.5px;
+      margin-bottom: 4px;
+    }
+
+    .chip {
+      background: var(--chip);
+      color: #374151;
+      border-radius: 4px;
+      padding: 2px 5px;
+      font-weight: 700;
+      font-size: 10px;
+    }
+
+    .chip.green { color: var(--green); background: var(--green-soft); }
+    .chip.blue { color: var(--blue); background: var(--blue-soft); }
+    .chip.purple { color: var(--purple); background: #f5f3ff; }
+
+    .date-chip {
+      color: #111827;
+      background: #ffffff;
+      border: 1px solid #dbeafe;
+      border-radius: 5px;
+      padding: 2px 6px;
+      font-size: 11.5px;
+      font-weight: 850;
+    }
+
+    .desc {
+      font-weight: 700;
+      font-size: 12.8px;
+      line-height: 1.28;
+      margin-bottom: 5px;
+      color: #111827;
+      letter-spacing: 0;
+    }
+
+    .row-num {
+      color: #374151;
+      font-weight: 800;
+    }
+
+    .desc-sep {
+      color: #9ca3af;
+      font-weight: 600;
+      margin: 0 2px;
+    }
+
+    .desc-name {
+      font-weight: 700;
+    }
+
+    .category-line {
+      display: grid;
+      grid-template-columns: 1fr 140px;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .category-input {
+      height: 28px;
+      font-size: 12px;
+    }
+
+    .category-input.editing {
+      background: #fff7ed;
+      border-color: #fdba74;
+      box-shadow: 0 0 0 3px rgba(251,146,60,.10);
+    }
+
+    .category-hint {
+      font-size: 10px;
+      color: #c2410c;
+      margin-top: 3px;
+      display: none;
+      font-weight: 700;
+    }
+
+    .category-hint.show { display: block; }
+
+    .actions {
+      display: flex;
+      gap: 6px;
+      justify-content: flex-end;
+      align-items: center;
+    }
+
+    .amountbox {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 5px;
+      padding-top: 18px;
+    }
+
+    .amount {
+      font-size: 13px;
+      font-weight: 900;
+      white-space: nowrap;
+    }
+
+    .amount.neg { color: var(--red); }
+    .amount.pos { color: var(--green); }
+
+    .small-links {
+      display: flex;
+      gap: 10px;
+      margin-top: 4px;
+      color: var(--muted);
+      font-size: 10.5px;
+    }
+
+    details { margin-top: 3px; }
+
+    summary {
+      cursor: pointer;
+      color: var(--blue);
+      font-weight: 700;
+      font-size: 10.5px;
+    }
+
+    .reason-box {
+      margin-top: 5px;
+      background: #f9fafb;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      padding: 7px;
+      line-height: 1.35;
+      color: #374151;
+      font-size: 11.5px;
+    }
+
+    pre {
+      white-space: pre-wrap;
+      background: #f9fafb;
+      color: #374151;
+      border: 1px solid var(--line);
+      padding: 7px;
+      border-radius: 6px;
+      max-height: 160px;
+      overflow: auto;
+      font-size: 10.5px;
+    }
+
+    .empty {
+      background: #ffffff;
+      padding: 26px;
+      border-radius: 8px;
+      border: 1px solid var(--line);
+      text-align: center;
+      color: var(--muted);
+      font-weight: 700;
+    }
+
+    .loading {
+      opacity: .60;
+      pointer-events: none;
+    }
+
+    @media (max-width: 1120px) {
+      .commandbar {
+        grid-template-columns: minmax(135px, 1fr) minmax(118px, 145px) 90px 90px 90px 82px 58px auto;
+        gap: 4px;
+      }
+
+      button {
+        padding-left: 7px;
+        padding-right: 7px;
+      }
+    }
+
+    @media (max-width: 980px) {
+      .commandbar {
+        grid-template-columns: 1fr 132px 84px 84px 84px 76px 54px;
+      }
+
+      .actions-top {
+        grid-column: 1 / -1;
+        justify-content: flex-end;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="command-wrap">
+    <div class="commandbar">
+      <div class="field">
+        <label>Buscar</label>
+        <input id="query" placeholder="Descrição, categoria..." onkeydown="if(event.key==='Enter') loadData()">
+      </div>
+
+      <div class="field">
+        <label>Conta/cartão</label>
+        <div class="multi" id="accountMulti">
+          <button type="button" class="multi-button" id="accountsButton" onclick="toggleAccountMenu(event)">Tudo</button>
+          <div class="multi-menu" id="accountsMenu" onclick="event.stopPropagation()"></div>
+        </div>
+      </div>
+
+      <div class="field">
+        <label>Período</label>
+        <select id="periodPreset" onchange="applyPeriodPreset(true)">
+          <option value="ALL">Tudo</option>
+          <option value="TODAY">Hoje</option>
+          <option value="YESTERDAY">Ontem</option>
+          <option value="LAST_7">Últimos 7 dias</option>
+          <option value="LAST_15">Últimos 15 dias</option>
+          <option value="LAST_30">Últimos 30 dias</option>
+          <option value="LAST_90">Últimos 90 dias</option>
+          <option value="CURRENT_MONTH">Mês atual</option>
+          <option value="PREVIOUS_MONTH">Mês anterior</option>
+          <option value="LAST_YEAR">Último ano</option>
+          <option value="CUSTOM">Personalizado</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label>De</label>
+        <input id="dateStart" type="date" onchange="setCustomPeriod()">
+      </div>
+
+      <div class="field">
+        <label>Até</label>
+        <input id="dateEnd" type="date" onchange="setCustomPeriod()">
+      </div>
+
+      <div class="field">
+        <label>Ordem</label>
+        <select id="sortBy" onchange="loadData()">
+          <option value="SMART">Inteligente</option>
+          <option value="DATE_ASC">Data ↑</option>
+          <option value="DATE_DESC">Data ↓</option>
+          <option value="CONF_DESC">Conf. ↓</option>
+          <option value="CONF_ASC">Conf. ↑</option>
+          <option value="VALUE_DESC">Valor ↓</option>
+          <option value="VALUE_ASC">Valor ↑</option>
+          <option value="IMPACT_DESC">Impacto ↓</option>
+          <option value="IMPACT_ASC">Impacto ↑</option>
+          <option value="ACCOUNT">Conta</option>
+          <option value="CATEGORY">Categoria</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label>Limite</label>
+        <input id="limit" type="number" min="10" max="500" value="80">
+      </div>
+
+      <div class="actions-top">
+        <button class="primary" onclick="loadData()">Filtrar</button>
+        <button class="success" onclick="batchApprove()">Aplicar decisões</button>
+        <button class="danger" onclick="clearQueue()">Limpar seleção</button>
+        <button class="primary" onclick="loadData()">Atualizar</button>
+      </div>
+    </div>
+
+    <div class="statusline">
+      <div class="statsline" id="stats"></div>
+      <div id="statusbar">Carregando...</div>
+    </div>
+  </div>
+
+  <div class="wrap" id="app">
+    <div class="panel">
+      <datalist id="categoriesList"></datalist>
+      <section class="list" id="list"></section>
+    </div>
+  </div>
+
+  <script>
+    const QUEUE_KEY = "GFP_PANEL_V2_TEMP_QUEUE_14_9_6";
+
+    let STATE = {
+      categories: [],
+      accounts: [],
+      items: [],
+      busy: false,
+      focusedRow: null,
+      queue: loadQueue(),
+      selectedAccounts: ["__ALL__"]
+    };
+
+    document.addEventListener("DOMContentLoaded", function() {
+      document.addEventListener("click", closeAccountMenu);
+      applyPeriodPreset(false);
+      loadData();
+      installKeyboardShortcuts();
+    });
+
+    function setBusy(flag) {
+      STATE.busy = flag;
+      document.getElementById("app").classList.toggle("loading", flag);
+    }
+
+    function loadData() {
+      setBusy(true);
+      setStatus("Carregando...");
+
+      const filters = {
+        query: document.getElementById("query").value || "",
+        group: "ALL",
+        minConfidence: 0,
+        limit: Number(document.getElementById("limit").value || 80),
+        sortBy: document.getElementById("sortBy").value || "SMART",
+        accounts: getSelectedAccounts(),
+        dateStart: document.getElementById("dateStart").value || "",
+        dateEnd: document.getElementById("dateEnd").value || ""
+      };
+
+      google.script.run
+        .withSuccessHandler(data => {
+          STATE.categories = data.categories || [];
+          STATE.accounts = data.accounts || [];
+          STATE.items = data.items || [];
+
+          renderCategories();
+          renderAccountMenu();
+          renderStats(data.stats || {});
+
+          const visibleItems = sortItemsClientSide(filterAlreadyQueued(data.items || []));
+          renderList(visibleItems);
+
+          const hidden99 = data.hidden99 ? ` | 99.* ocultas: ${data.hidden99}` : "";
+          setStatus(`Exibindo ${visibleItems.length} de ${data.totalMatched || 0}.${hidden99} Patch ${data.patch}.`);
+
+          focusFirstItemSoft();
+          setBusy(false);
+        })
+        .withFailureHandler(err => {
+          setStatus("Erro: " + getErrorMessage(err));
+          setBusy(false);
+        })
+        .apiReviewPanelV2GetDataFiltered_14_9_9(filters);
+    }
+
+    function filterAlreadyQueued(items) {
+      const queuedRows = new Set(STATE.queue.map(a => Number(a.row)));
+      return items.filter(item => !queuedRows.has(Number(item.row)));
+    }
+
+    function sortItemsClientSide(items) {
+      const sortBy = String(document.getElementById("sortBy")?.value || "SMART").toUpperCase();
+      const arr = Array.isArray(items) ? items.slice() : [];
+
+      arr.sort((a, b) => {
+        if (sortBy === "DATE_ASC") {
+          return compareDate(a, b, true) || Number(a.row || 0) - Number(b.row || 0);
+        }
+
+        if (sortBy === "DATE_DESC") {
+          return compareDate(a, b, false) || Number(a.row || 0) - Number(b.row || 0);
+        }
+
+        if (sortBy === "CONF_DESC") {
+          return compareNumber(Number(b.confidence || 0), Number(a.confidence || 0)) ||
+                 compareDate(a, b, true) ||
+                 Number(a.row || 0) - Number(b.row || 0);
+        }
+
+        if (sortBy === "CONF_ASC") {
+          return compareNumber(Number(a.confidence || 0), Number(b.confidence || 0)) ||
+                 compareDate(a, b, true) ||
+                 Number(a.row || 0) - Number(b.row || 0);
+        }
+
+        if (sortBy === "VALUE_DESC") {
+          return compareNumber(Number(b.valor || 0), Number(a.valor || 0)) ||
+                 compareDate(a, b, true) ||
+                 Number(a.row || 0) - Number(b.row || 0);
+        }
+
+        if (sortBy === "VALUE_ASC") {
+          return compareNumber(Number(a.valor || 0), Number(b.valor || 0)) ||
+                 compareDate(a, b, true) ||
+                 Number(a.row || 0) - Number(b.row || 0);
+        }
+
+        if (sortBy === "IMPACT_DESC") {
+          return compareNumber(Math.abs(Number(b.valor || 0)), Math.abs(Number(a.valor || 0))) ||
+                 compareDate(a, b, true) ||
+                 Number(a.row || 0) - Number(b.row || 0);
+        }
+
+        if (sortBy === "IMPACT_ASC") {
+          return compareNumber(Math.abs(Number(a.valor || 0)), Math.abs(Number(b.valor || 0))) ||
+                 compareDate(a, b, true) ||
+                 Number(a.row || 0) - Number(b.row || 0);
+        }
+
+        if (sortBy === "ACCOUNT") {
+          return String(a.conta || "").localeCompare(String(b.conta || "")) ||
+                 compareDate(a, b, true) ||
+                 Number(a.row || 0) - Number(b.row || 0);
+        }
+
+        if (sortBy === "CATEGORY") {
+          return String(a.categoria || a.suggestedCategory || "").localeCompare(String(b.categoria || b.suggestedCategory || "")) ||
+                 compareDate(a, b, true) ||
+                 Number(a.row || 0) - Number(b.row || 0);
+        }
+
+        // Inteligente: prioriza o que é mais aprovável.
+        if (Number(a.priority || 99) !== Number(b.priority || 99)) {
+          return Number(a.priority || 99) - Number(b.priority || 99);
+        }
+
+        return compareNumber(Number(b.confidence || 0), Number(a.confidence || 0)) ||
+               compareDate(a, b, true) ||
+               Number(a.row || 0) - Number(b.row || 0);
+      });
+
+      return arr;
+    }
+
+    function compareDate(a, b, asc) {
+      const da = String(a.dateKey || toDateKey(a.data) || "");
+      const db = String(b.dateKey || toDateKey(b.data) || "");
+
+      if (!da && !db) return 0;
+      if (!da) return 1;
+      if (!db) return -1;
+
+      const cmp = da.localeCompare(db);
+      return asc ? cmp : -cmp;
+    }
+
+    function toDateKey(value) {
+      const s = String(value || "").trim();
+      const m = s.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+      if (!m) return "";
+      return `${m[3]}-${m[2]}-${m[1]}`;
+    }
+
+    function compareNumber(a, b) {
+      if (a < b) return -1;
+      if (a > b) return 1;
+      return 0;
+    }
+
+    function renderCategories() {
+      const dl = document.getElementById("categoriesList");
+      dl.innerHTML = "";
+
+      STATE.categories.forEach(cat => {
+        const opt = document.createElement("option");
+        opt.value = cat;
+        dl.appendChild(opt);
+      });
+    }
+
+    function renderAccountMenu() {
+      const menu = document.getElementById("accountsMenu");
+      const accounts = STATE.accounts || [];
+      const selected = getSelectedAccounts();
+
+      const allChecked = selected.indexOf("__ALL__") >= 0;
+
+      let html = `
+        <label class="multi-option">
+          <input type="checkbox" value="__ALL__" ${allChecked ? "checked" : ""} onchange="onAccountChange(this)">
+          <span>Tudo</span>
+        </label>
+      `;
+
+      accounts.forEach(acc => {
+        const checked = !allChecked && selected.indexOf(acc) >= 0;
+        html += `
+          <label class="multi-option">
+            <input type="checkbox" value="${escapeAttr(acc)}" ${checked ? "checked" : ""} onchange="onAccountChange(this)">
+            <span>${escapeHtml(acc)}</span>
+          </label>
+        `;
+      });
+
+      menu.innerHTML = html;
+      updateAccountsButton();
+    }
+
+    function toggleAccountMenu(event) {
+      if (event) event.stopPropagation();
+      document.getElementById("accountMulti").classList.toggle("open");
+    }
+
+    function closeAccountMenu() {
+      const el = document.getElementById("accountMulti");
+      if (el) el.classList.remove("open");
+    }
+
+    function onAccountChange(input) {
+      const menu = document.getElementById("accountsMenu");
+      const boxes = Array.from(menu.querySelectorAll("input[type='checkbox']"));
+      const value = input.value;
+
+      if (value === "__ALL__" && input.checked) {
+        boxes.forEach(b => {
+          if (b.value !== "__ALL__") b.checked = false;
+        });
+        STATE.selectedAccounts = ["__ALL__"];
+      } else {
+        const allBox = boxes.find(b => b.value === "__ALL__");
+        if (allBox) allBox.checked = false;
+
+        const selected = boxes
+          .filter(b => b.value !== "__ALL__" && b.checked)
+          .map(b => b.value);
+
+        STATE.selectedAccounts = selected.length ? selected : ["__ALL__"];
+
+        if (!selected.length && allBox) allBox.checked = true;
+      }
+
+      updateAccountsButton();
+    }
+
+    function getSelectedAccounts() {
+      return STATE.selectedAccounts && STATE.selectedAccounts.length ? STATE.selectedAccounts : ["__ALL__"];
+    }
+
+    function updateAccountsButton() {
+      const btn = document.getElementById("accountsButton");
+      const selected = getSelectedAccounts();
+
+      if (selected.indexOf("__ALL__") >= 0) {
+        btn.textContent = "Tudo";
+      } else if (selected.length === 1) {
+        btn.textContent = selected[0];
+      } else {
+        btn.textContent = `${selected.length} contas/cartões`;
+      }
+    }
+
+    function applyPeriodPreset(autoLoad) {
+      const preset = document.getElementById("periodPreset").value;
+      const start = document.getElementById("dateStart");
+      const end = document.getElementById("dateEnd");
+
+      const today = startOfDay(new Date());
+      let a = "";
+      let b = "";
+
+      if (preset === "ALL") {
+        a = "";
+        b = "";
+      } else if (preset === "TODAY") {
+        a = fmtDate(today);
+        b = fmtDate(today);
+      } else if (preset === "YESTERDAY") {
+        const d = addDays(today, -1);
+        a = fmtDate(d);
+        b = fmtDate(d);
+      } else if (preset === "LAST_7") {
+        a = fmtDate(addDays(today, -6));
+        b = fmtDate(today);
+      } else if (preset === "LAST_15") {
+        a = fmtDate(addDays(today, -14));
+        b = fmtDate(today);
+      } else if (preset === "LAST_30") {
+        a = fmtDate(addDays(today, -29));
+        b = fmtDate(today);
+      } else if (preset === "LAST_90") {
+        a = fmtDate(addDays(today, -89));
+        b = fmtDate(today);
+      } else if (preset === "CURRENT_MONTH") {
+        a = fmtDate(new Date(today.getFullYear(), today.getMonth(), 1));
+        b = fmtDate(new Date(today.getFullYear(), today.getMonth() + 1, 0));
+      } else if (preset === "PREVIOUS_MONTH") {
+        a = fmtDate(new Date(today.getFullYear(), today.getMonth() - 1, 1));
+        b = fmtDate(new Date(today.getFullYear(), today.getMonth(), 0));
+      } else if (preset === "LAST_YEAR") {
+        a = fmtDate(addDays(today, -364));
+        b = fmtDate(today);
+      } else if (preset === "CUSTOM") {
+        return;
+      }
+
+      start.value = a;
+      end.value = b;
+
+      if (autoLoad) loadData();
+    }
+
+    function setCustomPeriod() {
+      document.getElementById("periodPreset").value = "CUSTOM";
+    }
+
+    function startOfDay(d) {
+      return new Date(d.getFullYear(), d.getMonth(), d.getDate());
+    }
+
+    function addDays(d, days) {
+      return new Date(d.getFullYear(), d.getMonth(), d.getDate() + days);
+    }
+
+    function fmtDate(d) {
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, "0");
+      const day = String(d.getDate()).padStart(2, "0");
+      return `${y}-${m}-${day}`;
+    }
+
+    function renderStats(s) {
+      renderStatsFromCurrent(s);
+    }
+
+    function renderList(items) {
+      const list = document.getElementById("list");
+
+      if (!items.length) {
+        list.innerHTML = `<div class="empty">Nenhuma pendência encontrada neste filtro.</div>`;
+        return;
+      }
+
+      list.innerHTML = items.map(item => renderItem(item)).join("");
+      updateSelectedVisuals();
+    }
+
+    function renderItem(item) {
+      const amountClass = Number(item.valor || 0) < 0 ? "neg" : "pos";
+      const checkedDisabled = item.safeToBatchApprove ? "" : "disabled";
+      const catValue = item.categoria || item.suggestedCategory || "";
+      const reasonShort = item.reason || item.notas || "Sem motivo registrado.";
+
+      const confidence = item.confidence !== "" ? `<span class="chip blue">${escapeHtml(String(item.confidence))}%</span>` : "";
+      const faixa = item.faixa || item.group || "—";
+      const source = item.source || "—";
+
+      return `
+        <article
+          class="item ${escapeAttr(item.group)}"
+          id="item-${item.row}"
+          data-row="${item.row}"
+          tabindex="0"
+          onclick="handleItemClick(event, ${item.row})"
+          onfocus="STATE.focusedRow=${item.row}"
+        >
+          <div class="card-grid">
+            <div class="checkwrap">
+              <input type="checkbox" class="rowcheck" value="${item.row}" ${checkedDisabled}
+                onclick="handleCheckboxClick(event, ${item.row})">
+            </div>
+
+            <div class="content">
+              <div class="top-meta">
+                <span class="chip">${escapeHtml(item.conta || "")}</span>
+                <span class="date-chip">${escapeHtml(item.data || "")}</span>
+                ${item.meta && item.meta.cashMonth ? `<span>Caixa ${escapeHtml(item.meta.cashMonth)}</span>` : ""}
+                <span class="chip blue">${escapeHtml(source)}</span>
+                <span class="chip green">${escapeHtml(faixa)}</span>
+                ${confidence}
+                ${item.modelAcertos !== "" ? `<span class="chip purple">Acertos ${escapeHtml(String(item.modelAcertos))}</span>` : ""}
+              </div>
+
+              <div class="desc">
+                <span class="row-num">#${item.row}</span><span class="desc-sep">—</span><span class="desc-name">${escapeHtml(item.descricao)}</span>
+              </div>
+
+              <div class="category-line">
+                <div>
+                  <input
+                    class="category-input"
+                    list="categoriesList"
+                    id="cat-${item.row}"
+                    value="${escapeAttr(catValue)}"
+                    data-original="${escapeAttr(catValue)}"
+                    data-cleared="0"
+                    placeholder="Clique para trocar ou digite para buscar..."
+                    onclick="prepareCategoryEdit(event, ${item.row})"
+                    onfocus="prepareCategoryEdit(event, ${item.row})"
+                    onblur="restoreCategoryIfEmpty(${item.row})"
+                  >
+                  <div class="category-hint" id="cat-hint-${item.row}">
+                    Digite parte do nome ou selecione uma categoria. Se aprovar vazio, será usada a categoria original.
+                  </div>
+                </div>
+
+                <div class="actions">
+                  <button class="success" onclick="approveRow(${item.row})">Salvar</button>
+                  <button class="secondary" onclick="skipRow(${item.row})">Pular</button>
+                </div>
+              </div>
+
+              <div class="small-links">
+                <details>
+                  <summary>Motivo</summary>
+                  <div class="reason-box">${escapeHtml(reasonShort)}</div>
+                </details>
+
+                <details>
+                  <summary>Técnico</summary>
+                  <pre>${escapeHtml(JSON.stringify(item, null, 2))}</pre>
+                </details>
+              </div>
+            </div>
+
+            <div class="amountbox">
+              <div class="amount ${amountClass}">${escapeHtml(item.valorFmt || "")}</div>
+            </div>
+          </div>
+        </article>
+      `;
+    }
+
+
+    function loadQueue() {
+      // Fila temporária da sessão visual atual.
+      // Não reaproveita fila antiga do navegador, para o painel sempre abrir zerado.
+      try {
+        sessionStorage.removeItem(QUEUE_KEY);
+      } catch (e) {}
+      return [];
+    }
+
+
+
+    function prepareCategoryEdit(event, row) {
+      if (event) event.stopPropagation();
+
+      const input = document.getElementById(`cat-${row}`);
+      const hint = document.getElementById(`cat-hint-${row}`);
+
+      if (!input) return;
+
+      STATE.focusedRow = row;
+
+      if (input.dataset.cleared !== "1") {
+        input.dataset.original = input.value || input.dataset.original || "";
+        input.value = "";
+        input.dataset.cleared = "1";
+      }
+
+      input.classList.add("editing");
+      if (hint) hint.classList.add("show");
+
+      setTimeout(() => {
+        input.focus();
+        try {
+          input.dispatchEvent(new Event("input", { bubbles: true }));
+        } catch (e) {}
+      }, 0);
+    }
+
+    function restoreCategoryIfEmpty(row) {
+      const input = document.getElementById(`cat-${row}`);
+      const hint = document.getElementById(`cat-hint-${row}`);
+
+      if (!input) return;
+
+      if (!String(input.value || "").trim()) {
+        input.value = input.dataset.original || "";
+        input.dataset.cleared = "0";
+      }
+
+      input.classList.remove("editing");
+      if (hint) hint.classList.remove("show");
+    }
+
+    function getCategoryForApprove(row) {
+      const input = document.getElementById(`cat-${row}`);
+      if (!input) return "";
+
+      const typed = String(input.value || "").trim();
+      const original = String(input.dataset.original || "").trim();
+
+      return typed || original;
+    }
+
+    function handleItemClick(event, row) {
+      STATE.focusedRow = row;
+      if (isInteractiveTarget(event.target)) return;
+      toggleRowSelection(row);
+      focusItem(row, false);
+    }
+
+    function handleCheckboxClick(event, row) {
+      event.stopPropagation();
+      STATE.focusedRow = row;
+      focusItem(row, false);
+      updateSelectedVisuals();
+    }
+
+    function toggleRowSelection(row) {
+      const checkbox = document.querySelector(`.rowcheck[value="${row}"]`);
+
+      if (!checkbox || checkbox.disabled) {
+        setStatus(`Linha ${row} não é selecionável para aprovação em lote.`);
+        return;
+      }
+
+      checkbox.checked = !checkbox.checked;
+      updateSelectedVisuals();
+      setStatus(`${countSelected()} selecionada(s).`);
+    }
+
+    function toggleAllFromHeader(el) {
+      if (el.checked) selectAllVisible();
+      else unselectAllVisible();
+    }
+
+    function selectAllVisible() {
+      const boxes = Array.from(document.querySelectorAll(".rowcheck:not(:disabled)"));
+      boxes.forEach(box => box.checked = true);
+      updateSelectedVisuals();
+      setStatus(`${boxes.length} selecionada(s).`);
+    }
+
+    function unselectAllVisible() {
+      const boxes = Array.from(document.querySelectorAll(".rowcheck"));
+      boxes.forEach(box => box.checked = false);
+      updateSelectedVisuals();
+      setStatus("Seleção limpa.");
+    }
+
+    function updateSelectedVisuals() {
+      document.querySelectorAll(".item").forEach(card => {
+        const row = card.getAttribute("data-row");
+        const checkbox = document.querySelector(`.rowcheck[value="${row}"]`);
+        card.classList.toggle("selected", !!(checkbox && checkbox.checked));
+      });
+
+      renderStatsFromCurrent();
+    }
+
+    function countSelected() {
+      return document.querySelectorAll(".rowcheck:checked").length;
+    }
+
+
+    function installKeyboardShortcuts() {
+      document.addEventListener("keydown", function(event) {
+        if (STATE.busy) return;
+        if (isInteractiveTarget(event.target)) return;
+
+        const key = String(event.key || "").toLowerCase();
+
+        if (key === "j" || event.key === "ArrowDown") {
+          event.preventDefault();
+          focusRelativeItem(1);
+          return;
+        }
+
+        if (key === "k" || event.key === "ArrowUp") {
+          event.preventDefault();
+          focusRelativeItem(-1);
+          return;
+        }
+
+        if (event.key === " ") {
+          event.preventDefault();
+          const row = getFocusedRow();
+          if (row) toggleRowSelection(row);
+          return;
+        }
+
+        if (key === "s") {
+          event.preventDefault();
+          selectAllVisible();
+          return;
+        }
+
+        if (key === "d") {
+          event.preventDefault();
+          unselectAllVisible();
+          return;
+        }
+
+        if (key === "a") {
+          event.preventDefault();
+          const row = getFocusedRow();
+          if (row) approveRow(row);
+          return;
+        }
+
+        if (key === "p") {
+          event.preventDefault();
+          const row = getFocusedRow();
+          if (row) skipRow(row);
+          return;
+        }
+
+        if (key === "r") {
+          event.preventDefault();
+          loadData();
+          return;
+        }
+
+        if (key === "f") {
+          event.preventDefault();
+          finalizeSession();
+          return;
+        }
+      });
+    }
+
+    function isInteractiveTarget(target) {
+      if (!target) return false;
+
+      const tag = String(target.tagName || "").toUpperCase();
+
+      if (["INPUT", "SELECT", "TEXTAREA", "BUTTON", "SUMMARY", "A", "OPTION", "LABEL"].indexOf(tag) >= 0) {
+        return true;
+      }
+
+      if (target.closest && target.closest("details")) return true;
+      if (target.closest && target.closest(".multi")) return true;
+
+      return false;
+    }
+
+    function focusFirstItemSoft() {
+      const first = document.querySelector(".item");
+      if (first) STATE.focusedRow = Number(first.getAttribute("data-row") || 0);
+    }
+
+    function getFocusedRow() {
+      if (STATE.focusedRow) return STATE.focusedRow;
+
+      const active = document.activeElement;
+      if (active && active.classList && active.classList.contains("item")) {
+        return Number(active.getAttribute("data-row") || 0);
+      }
+
+      const first = document.querySelector(".item");
+      if (first) {
+        const row = Number(first.getAttribute("data-row") || 0);
+        STATE.focusedRow = row;
+        return row;
+      }
+
+      return null;
+    }
+
+    function focusItem(row, scroll) {
+      const el = document.getElementById(`item-${row}`);
+      if (!el) return;
+
+      STATE.focusedRow = row;
+      el.focus({ preventScroll: !scroll });
+
+      if (scroll) el.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+
+    function focusRelativeItem(delta) {
+      const cards = Array.from(document.querySelectorAll(".item"));
+      if (!cards.length) return;
+
+      const focused = getFocusedRow();
+      let idx = cards.findIndex(el => Number(el.getAttribute("data-row") || 0) === Number(focused));
+
+      if (idx < 0) idx = 0;
+      else idx = Math.max(0, Math.min(cards.length - 1, idx + delta));
+
+      const row = Number(cards[idx].getAttribute("data-row") || 0);
+      focusItem(row, true);
+    }
+
+
+    function skipRow(row) {
+      removeItem(row);
+      setStatus(`Linha ${row} pulada. Nada foi gravado.`);
+    }
+
+
+    function removeItem(row) {
+      const el = document.getElementById(`item-${row}`);
+      if (!el) return;
+
+      el.classList.add("removing");
+
+      setTimeout(() => {
+        el.remove();
+        focusFirstItemSoft();
+        updateLocalStatusAfterRemoval();
+        renderStatsFromCurrent();
+      }, 90);
+    }
+
+    function removeItems(rows) {
+      rows.forEach(row => {
+        const el = document.getElementById(`item-${row}`);
+        if (el) {
+          el.classList.add("removing");
+          setTimeout(() => el.remove(), 90);
+        }
+      });
+
+      setTimeout(() => {
+        focusFirstItemSoft();
+        updateLocalStatusAfterRemoval();
+        renderStatsFromCurrent();
+      }, 120);
+    }
+
+
+    function clearFilters() {
+      document.getElementById("query").value = "";
+      document.getElementById("periodPreset").value = "ALL";
+      document.getElementById("dateStart").value = "";
+      document.getElementById("dateEnd").value = "";
+      document.getElementById("limit").value = "80";
+      document.getElementById("sortBy").value = "SMART";
+      STATE.selectedAccounts = ["__ALL__"];
+      loadData();
+    }
+
+    function setStatus(msg) {
+      document.getElementById("statusbar").innerHTML = escapeHtml(msg);
+      renderStatsFromCurrent();
+    }
+
+    function getErrorMessage(err) {
+      if (!err) return "Erro desconhecido.";
+      return err.message || String(err);
+    }
+
+    function escapeHtml(value) {
+      return String(value == null ? "" : value)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    }
+
+    function escapeAttr(value) {
+      return escapeHtml(value).replace(/`/g, "&#096;");
+    }
+
+    /**
+     * =============================================================================
+     * GFP 16.1.18.2 — OVERRIDE FRONTEND PAINEL TURBO
+     * =============================================================================
+     * Um botão: Aplicar decisões.
+     * Sem fila temporária persistente.
+     * Sem Finalizar.
+     * =============================================================================
+     */
+
+(function GFP_PANEL_V2_TURBO_UI_BOOT_16_1_18_2() {
+  try {
+    setTimeout(function() {
+      const buttons = Array.from(document.querySelectorAll("button"));
+
+      buttons.forEach(function(btn) {
+        const txt = String(btn.textContent || "").trim().toLowerCase();
+
+        if (txt === "salvar seleção") {
+          btn.textContent = "Aplicar decisões";
+          btn.onclick = batchApprove;
+        }
+
+        if (txt === "finalizar") {
+          btn.style.display = "none";
+        }
+
+        if (txt === "limpar fila") {
+          btn.textContent = "Limpar seleção";
+          btn.onclick = clearQueue;
+        }
+      });
+    }, 0);
+  } catch (e) {}
+})();
+
+
+function queueAction(action) {
+  // Mantido por compatibilidade, mas o modo 16.1.18.2 não usa fila persistente.
+  const row = Number(action && action.row || 0);
+  if (!row) return;
+
+  STATE.queue = STATE.queue.filter(function(a) {
+    return Number(a.row) !== row;
+  });
+
+  STATE.queue.push(action);
+  saveQueue();
+}
+
+
+function saveQueue() {
+  renderStatsFromCurrent();
+}
+
+
+function clearQueue() {
+  STATE.queue = [];
+  saveQueue();
+
+  Array.from(document.querySelectorAll(".rowcheck")).forEach(function(box) {
+    box.checked = false;
+  });
+
+  updateSelectedVisuals();
+  setStatus("Seleção limpa.");
+}
+
+
+function renderStatsFromCurrent() {
+  const statsEl = document.getElementById("stats");
+  if (!statsEl) return;
+
+  const remaining = document.querySelectorAll(".item").length;
+  const enabled = Array.from(document.querySelectorAll(".rowcheck:not(:disabled)"));
+  const allChecked = enabled.length > 0 && enabled.every(function(b) { return b.checked; });
+
+  statsEl.innerHTML = `
+    <span class="pill">Pendentes: <strong>${remaining}</strong></span>
+    <span class="pill">Selecionados: <strong>${countSelected()}</strong></span>
+    <label class="pill pill-check">
+      <input type="checkbox" id="selectAllMini" onclick="toggleAllFromHeader(this)" ${allChecked ? "checked" : ""}>
+      Tudo
+    </label>
+  `;
+}
+
+
+function approveRow(row) {
+  const category = getCategoryForApprove(row);
+
+  const action = {
+    action: "APPROVE",
+    row: Number(row),
+    category: category,
+    queuedAt: new Date().toISOString()
+  };
+
+  applyReviewActions_16_1_18_2([action], [Number(row)]);
+}
+
+
+function batchApprove() {
+  const rows = Array.from(document.querySelectorAll(".rowcheck:checked"))
+    .map(function(el) { return Number(el.value); })
+    .filter(Boolean);
+
+  if (!rows.length) {
+    setStatus("Selecione ao menos uma linha.");
+    return;
+  }
+
+  const actions = rows.map(function(row) {
+    return {
+      action: "APPROVE",
+      row: Number(row),
+      category: getCategoryForApprove(row),
+      queuedAt: new Date().toISOString()
+    };
+  });
+
+  applyReviewActions_16_1_18_2(actions, rows);
+}
+
+
+function finalizeSession() {
+  // Compatibilidade com atalho antigo.
+  // Agora Finalizar = Aplicar decisões selecionadas.
+  batchApprove();
+}
+
+
+function applyReviewActions_16_1_18_2(actions, rowsToRemove) {
+  if (!actions || !actions.length) {
+    setStatus("Nenhuma decisão para aplicar.");
+    return;
+  }
+
+  setBusy(true);
+  setStatus(`Aplicando ${actions.length} decisão(ões)...`);
+
+  google.script.run
+    .withSuccessHandler(function(result) {
+      setBusy(false);
+
+      const committed = Number(result && result.committed || 0);
+      const skipped = Number(result && result.skipped || 0);
+
+      if (committed > 0) {
+        removeItems(rowsToRemove || []);
+      }
+
+      STATE.queue = [];
+      saveQueue();
+
+      setStatus(
+        `Aplicado: ${committed} decisão(ões). Ignoradas: ${skipped}. ` +
+        `As linhas OK permanecem na DB_TRANSACOES até Arquivar Linhas OK.`
+      );
+    })
+    .withFailureHandler(function(err) {
+      setBusy(false);
+      setStatus("Erro: " + getErrorMessage(err));
+    })
+    .apiReviewPanelV2CommitSession_14_9_6({ actions: actions });
+}
+
+
+function updateLocalStatusAfterRemoval() {
+  const remaining = document.querySelectorAll(".item").length;
+
+  if (!remaining) {
+    document.getElementById("list").innerHTML =
+      `<div class="empty">Nenhuma pendência restante neste filtro. As decisões aplicadas já foram gravadas como OK na DB_TRANSACOES.</div>`;
+  }
+}
+
+  </script>
+</body>
+</html>

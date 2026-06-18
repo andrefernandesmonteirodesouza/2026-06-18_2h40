@@ -417,10 +417,19 @@ function GFP_MENU_INTEL_REORGANIZAR_16_1_18_25_() {
 
 function GFP_MENU_INTEL_AFTER_ACTION_16_1_18_25_() {
   const result = {
+    visual: null,
     logs: null,
     dre: null,
     hiddenTechSheets: null
   };
+
+  // GFP 16.1.18.28 — usa o saneamento visual JÁ EXISTENTE.
+  // Não cria módulo novo. Restaura cores, notas compactas e checkboxes.
+  result.visual = GFP_MENU_INTEL_CALL_16_1_18_25_(
+    "GFP_SANEAR_VISUAL_DB_TRANSACOES_14_5_1",
+    [],
+    true
+  );
 
   result.logs = GFP_MENU_INTEL_CALL_16_1_18_25_(
     "GFP_SYS_LOGS_RESTAURAR_PADRAO_ANTIGO_16_1_2",

@@ -67,14 +67,24 @@ function processModuleBradesco(content) {
       const day = parseInt(parts[0]);
       const month = parseInt(parts[1]);
       
-      // Cálculo de virada de ano original (Fallback de segurança)
+      // GFP 16.1.18.29 — DATA = data real da compra.
+      // Usa o vencimento da fatura somente para inferir o ano correto da compra
+      // quando a linha do Bradesco veio só com DD/MM.
       let yearCalc = yearNow;
-      const monthNow = new Date().getMonth() + 1;
-      if (monthNow < 3 && month > 10) yearCalc = yearNow - 1;
-      const dateFallback = `${day.toString().padStart(2,'0')}/${month.toString().padStart(2,'0')}/${yearCalc}`;
 
-      // 🎯 DECISÃO DE DATA: Prioriza Vencimento Master, senão usa o calculado
-      const finalDateToStore = vencimentoMaster ? vencimentoMaster : dateFallback;
+      if (vencimentoMaster && /^\d{4}-\d{2}-\d{2}$/.test(String(vencimentoMaster))) {
+        const dueYear = Number(String(vencimentoMaster).slice(0, 4));
+        const dueMonth = Number(String(vencimentoMaster).slice(5, 7));
+
+        yearCalc = month > dueMonth ? dueYear - 1 : dueYear;
+
+      } else {
+        const monthNow = new Date().getMonth() + 1;
+        if (monthNow < 3 && month > 10) yearCalc = yearNow - 1;
+      }
+
+      const dateFallback = `${day.toString().padStart(2,'0')}/${month.toString().padStart(2,'0')}/${yearCalc}`;
+      const finalDateToStore = dateFallback;
 
       out.push({
         data: finalDateToStore,

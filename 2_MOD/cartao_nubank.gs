@@ -57,11 +57,23 @@ function parseRegexNubank(text) {
           let valorFloat = parseFloat(valStr.replace(/\./g, "").replace(",", "."));
           valorFloat = Math.abs(valorFloat) * -1; 
 
-          // Fallback de Data original
-          const dateFallback = `${day}/${String(monthIndex + 1).padStart(2, '0')}/${yearCalc}`;
+          // GFP 16.1.18.29 — DATA = data real da compra.
+          // Se a fatura vence em ano/mês conhecido, usa isso apenas para inferir
+          // o ano correto da compra quando a linha veio sem ano.
+          let purchaseYear = yearCalc;
+
+          if (vencimentoMaster && /^\d{4}-\d{2}-\d{2}$/.test(String(vencimentoMaster))) {
+            const dueYear = Number(String(vencimentoMaster).slice(0, 4));
+            const dueMonth = Number(String(vencimentoMaster).slice(5, 7));
+            const purchaseMonth = Number(monthIndex + 1);
+
+            purchaseYear = purchaseMonth > dueMonth ? dueYear - 1 : dueYear;
+          }
+
+          const dateFallback = `${day}/${String(monthIndex + 1).padStart(2, '0')}/${purchaseYear}`;
 
           out.push({
-            data: vencimentoMaster ? vencimentoMaster : dateFallback,
+            data: dateFallback,
             descricao: `[${day}/${monthStr}] ${rawDesc}`,
             valor: valorFloat,
             parcela_atual: (rawDesc.match(/Parcela (\d+)\/(\d+)/i) || [0,1,1])[1],

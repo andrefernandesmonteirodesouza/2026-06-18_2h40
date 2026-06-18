@@ -76,7 +76,9 @@ function parseRegexXP(text) {
       if (Math.abs(valorFloat) < 0.01) return;
 
       out.push({
-        data: vencimentoMaster ? vencimentoMaster : dataCompra,
+        // GFP 16.1.18.29 — DATA = data real da compra.
+        // O vencimento/cashMonth da fatura fica nos METADADOS via invoice_cash_metadata.
+        data: dataCompra,
         descricao: `[${dataCompra.substring(0,5)}] ${descricao}`,
         valor: valorFloat,
         parcela_atual: (descricao.match(/Parcela (\d+)\/(\d+)/i) || [0,1,1])[1],

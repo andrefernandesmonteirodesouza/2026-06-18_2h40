@@ -872,6 +872,16 @@ function GFP_CENTRAL_FERRAMENTAS_REGISTRY_16_1_14_() {
       tags: ["metadados", "reparo", "seleção"]
     },
     {
+      id: "sanear_visual_db_transacoes",
+      title: "Sanear visual da DB_TRANSACOES",
+      fn: "GFP_SANEAR_VISUAL_DB_TRANSACOES_14_5_1",
+      risk: "YELLOW",
+      group: "Visual / Revisão",
+      backup: true,
+      description: "Reaplica cores Modelo/Gemini, compacta notas longas, restaura checkboxes e ordena a DB_TRANSACOES usando o saneamento visual já existente.",
+      tags: ["visual", "cores", "layout", "modelo", "gemini", "checkbox", "notas"]
+    },
+    {
       id: "aplicar_checkbox_pendencias",
       title: "Aplicar checkboxes em pendências categorizadas",
       fn: "GFP_APLICAR_CHECKBOX_PENDENCIAS_CATEGORIZADAS_14_3_1",

@@ -67,12 +67,14 @@ function processModuleInter(content) {
           pTotal = parseInt(parcMatch[2]);
       }
 
-      // --- LÓGICA DE DATA MASTER COM FALLBACK ---
+      // GFP 16.1.18.29 — DATA = data real da compra.
+      // A própria linha do Inter já traz o ano da compra.
+      // O vencimento/cashMonth da fatura fica nos METADADOS via invoice_cash_metadata.
       const dateFallback = `${day}/${month}/${yearOrig}`;
-      const finalDateToStore = vencimentoMaster ? vencimentoMaster : dateFallback;
+      const finalDateToStore = dateFallback;
 
       out.push({
-        data: finalDateToStore, // Coluna A: Fatura
+        data: finalDateToStore, // Coluna A: data real da compra
         descricao: `[${day}/${month}] ${descOrig}`, // Coluna B: Compra + Descrição
         valor: (isPlus || descOrig.toUpperCase().includes("PAGAMENTO DE FATURA")) ? valAbs : -valAbs, 
         account: "Inter André", 

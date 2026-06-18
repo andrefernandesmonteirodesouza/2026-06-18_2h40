@@ -16,7 +16,7 @@
  */
 
 const GFP_ESTORNOS_VERSION_16_1_11 = "16.1.11-ESTAVEL-SEGURO";
-const GFP_ESTORNOS_CATEGORIA_PADRAO_16_1_11 = "99.14 — Transitórias — Ajustes de Cartão — Estornos / Cancelamentos";
+const GFP_ESTORNOS_CATEGORIA_PADRAO_16_1_11 = "99.14 — Transitorias — Ajustes de Cartao — Estornos / Cancelamentos";
 const GFP_ESTORNOS_DB_16_1_17 = "DB_TRANSACOES";
 const GFP_ESTORNOS_HIST_16_1_17 = "DB_TRANSACOES_HIST";
 const GFP_ESTORNOS_TOLERANCIA_CENTAVOS_16_1_17 = 5;

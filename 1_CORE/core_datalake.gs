@@ -4662,22 +4662,22 @@ const GFP_PATCH_16_1_13 = "16.1.13";
 function GFP_CATEGORIAS_MIGRATION_MAP_16_1_13_() {
   return {
     "01.05 — Receitas — Maria Brasileira — Reembolsos":
-      "99.12 — Transitórias — Reembolsos — FERMONT",
+      "99.12 — Transitorias — Reembolsos — FERMONT",
 
     "02.17 — Despesas — Maria Brasileira — Maria Brasileira":
-      "99.10 — Transitórias — Despesas Reembolsáveis — FERMONT",
+      "99.10 — Transitorias — Despesas Reembolsaveis — FERMONT",
 
     "02.02 — Despesas — Alimentação — Restaurante / Lanchonete / Café":
-      "02.02 — Despesas — Alimentação — Lanchonete / Café / Refeições",
+      "02.02 — Despesas — Alimentacao — Lanchonete / Cafe / Refeicoes",
 
     "02.05 — Despesas — Lazer — Restaurantes / Bar / Balada":
       "02.05 — Despesas — Lazer — Bar / Balada / Festas",
 
     "02.05 — Despesas — Lazer — Confraternizações / Festas":
-      "02.05 — Despesas — Lazer — Restaurantes / Confraternizações",
+      "02.05 — Despesas — Lazer — Restaurantes / Confraternizacoes",
 
     "02.07 — Despesas — Educação — Cursos / Livros":
-      "02.07 — Despesas — Educação — Cursos / Livros / Papelaria"
+      "02.07 — Despesas — Educacao — Cursos / Livros / Papelaria"
   };
 }
 

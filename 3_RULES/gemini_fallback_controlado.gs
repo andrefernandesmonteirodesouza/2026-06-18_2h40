@@ -406,7 +406,7 @@ FORMATO DE RESPOSTA:
 [
   {
     "row": 123,
-    "categoria": "02.02 — Despesas — Alimentação — Delivery",
+    "categoria": "02.02 — Despesas — Alimentacao — Delivery",
     "confidence": 85,
     "reason": "Descrição indica iFood/delivery de alimentação"
   }

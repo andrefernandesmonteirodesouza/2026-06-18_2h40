@@ -1054,8 +1054,6 @@ function GFP_DASHBOARD_V2_AUDITAR_15_5() {
 
   if (typeof GFP_MANTER_HIST_STATUS_VISIVEL_15_5 === "function") {
     GFP_MANTER_HIST_STATUS_VISIVEL_15_5({ silent: true });
-  } else if (typeof GFP_MANTER_HIST_STATUS_VISIVEL_15_4 === "function") {
-    GFP_MANTER_HIST_STATUS_VISIVEL_15_4({ silent: true });
   }
 
   ss.toast(

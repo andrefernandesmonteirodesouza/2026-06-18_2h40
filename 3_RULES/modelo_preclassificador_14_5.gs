@@ -54,10 +54,37 @@ function GFP_DISABLE_MODELO_PRECLASSIFICADOR_14_5() {
  * Status do preclassificador.
  */
 function GFP_STATUS_MODELO_PRECLASSIFICADOR_14_5() {
-  return {
+  const out = {
     enabled: GFP_MODELO_PRECLASSIFICADOR_IS_ENABLED_14_5(),
-    property: GFP_PREMODEL_PROP_14_5
+    property: GFP_PREMODEL_PROP_14_5,
+    checkedAt: new Date().toISOString()
   };
+
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    GFP_PREMODEL_WRITE_REPORT_14_5_(ss, {
+      dryRun: true,
+      mode: "STATUS",
+      scanned: 0,
+      suggestions: 0,
+      examples: [],
+      status: out
+    });
+  } catch (eReportStatus) {
+    Logger.warn("[GFP 14.5] Falha ao escrever relatório de status: " + eReportStatus.message);
+  }
+
+  try {
+    GFP_PREMODEL_SYSLOG_14_5_(
+      "INFO",
+      "Modelo Interno",
+      "Status do Modelo Preclassificador: " + (out.enabled ? "ATIVADO" : "DESATIVADO")
+    );
+  } catch (eLogStatus) {}
+
+  Logger.log(JSON.stringify(out, null, 2));
+
+  return out;
 }
 
 /**
@@ -176,12 +203,35 @@ function GFP_MODELO_PRECLASSIFICAR_PENDENTES_14_5_(limit, dryRun) {
     GFP_PREMODEL_afterApply_14_5_();
   }
 
-  return {
+  const out = {
     dryRun: !!dryRun,
+    mode: dryRun ? "DRYRUN" : "APPLY",
     scanned: values.length,
     suggestions: suggestions.length,
-    examples: suggestions.slice(0, 50)
+    examples: suggestions.slice(0, 50),
+    generatedAt: new Date().toISOString()
   };
+
+  try {
+    GFP_PREMODEL_WRITE_REPORT_14_5_(ss, out);
+  } catch (eReport) {
+    Logger.warn("[GFP 14.5] Falha ao escrever relatório visual: " + eReport.message);
+  }
+
+  try {
+    GFP_PREMODEL_SYSLOG_14_5_(
+      dryRun ? "INFO" : "OK",
+      "Modelo Interno",
+      "Preclassificador " + (dryRun ? "DRYRUN" : "APPLY") +
+      " | lidas=" + values.length +
+      " | sugestoes=" + suggestions.length +
+      " | limite=" + safeLimit
+    );
+  } catch (eSyslog) {}
+
+  Logger.log(JSON.stringify(out, null, 2));
+
+  return out;
 }
 
 /**
@@ -419,6 +469,9 @@ function GFP_PREMODEL_buildDecision_14_5_(ctx) {
   return {
     shouldSuggest: true,
     row: ctx.row,
+    descricao: ctx.descricao,
+    conta: ctx.conta,
+    tipo: ctx.tipo,
     statusAtual: ctx.statusAtual,
     statusNovo: statusNovo,
     categoriaAtual: categoriaAtual,
@@ -589,4 +642,113 @@ function GFP_PREMODEL_stripAccents_14_5_(value) {
   return String(value || "")
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "");
+}
+
+/**
+ * GFP 16.1.18.24 — Relatório visual do Modelo Preclassificador.
+ *
+ * Cria/atualiza a aba SYS_MODELO_PRECLASSIFICADOR para permitir conferência
+ * humana do STATUS, DRYRUN e APPLY.
+ *
+ * Não altera a lógica do modelo.
+ * Não mexe em DB_TRANSACOES, salvo quando o APPLY original já mexeria.
+ */
+function GFP_PREMODEL_WRITE_REPORT_14_5_(ss, out) {
+  const sheetName = "SYS_MODELO_PRECLASSIFICADOR";
+  const totalCols = 12;
+
+  let sh = ss.getSheetByName(sheetName);
+
+  if (!sh) {
+    sh = ss.insertSheet(sheetName);
+  }
+
+  sh.clear();
+
+  const rows = [];
+
+  rows.push(["RELATÓRIO", "Modelo Preclassificador — CFG_Modelo_Classificacao antes do Gemini"]);
+  rows.push(["Versão", GFP_PREMODEL_PATCH_14_5]);
+  rows.push(["Modo", out.mode || (out.dryRun ? "DRYRUN" : "APPLY")]);
+  rows.push(["Executado em", new Date()]);
+  rows.push(["Property", GFP_PREMODEL_PROP_14_5]);
+  rows.push(["Status ativado", out.status ? !!out.status.enabled : GFP_MODELO_PRECLASSIFICADOR_IS_ENABLED_14_5()]);
+  rows.push(["Linhas lidas", out.scanned || 0]);
+  rows.push(["Sugestões", out.suggestions || 0]);
+  rows.push(["", ""]);
+
+  rows.push([
+    "LINHA",
+    "DESCRIÇÃO",
+    "CONTA",
+    "TIPO",
+    "STATUS ATUAL",
+    "STATUS NOVO",
+    "CATEGORIA ATUAL",
+    "CATEGORIA MODELO",
+    "SCORE MODELO",
+    "FAIXA",
+    "MATCH SCORE",
+    "CHAVE MODELO"
+  ]);
+
+  const examples = out.examples || [];
+
+  examples.forEach(function(s) {
+    rows.push([
+      s.row || "",
+      s.descricao || "",
+      s.conta || "",
+      s.tipo || "",
+      s.statusAtual || "",
+      s.statusNovo || "",
+      s.categoriaAtual || "",
+      s.categoriaNova || "",
+      s.model && s.model.score || "",
+      s.model && s.model.faixa || "",
+      s.matchScore || "",
+      s.model && s.model.chave || ""
+    ]);
+  });
+
+  const normalizedRows = rows.map(function(row) {
+    const safe = (row || []).slice(0, totalCols);
+
+    while (safe.length < totalCols) {
+      safe.push("");
+    }
+
+    return safe;
+  });
+
+  sh.getRange(1, 1, normalizedRows.length, totalCols).setValues(normalizedRows);
+
+  sh.getRange(1, 1, 1, totalCols).setFontWeight("bold");
+  sh.getRange(10, 1, 1, totalCols).setFontWeight("bold");
+  sh.setFrozenRows(10);
+  sh.autoResizeColumns(1, totalCols);
+
+  try {
+    sh.getRange("A:L").setWrap(true);
+  } catch (eWrap) {}
+
+  try {
+    sh.activate();
+  } catch (eActivate) {}
+}
+
+/**
+ * GFP 16.1.18.24 — Log humano do Modelo Preclassificador.
+ */
+function GFP_PREMODEL_SYSLOG_14_5_(level, area, message) {
+  try {
+    if (typeof GFP_LOG_HUMANO_APPEND_16_1_4_ === "function") {
+      GFP_LOG_HUMANO_APPEND_16_1_4_(level, area, message, "");
+      return;
+    }
+  } catch (e) {}
+
+  try {
+    Logger.log("[" + level + "] " + area + " — " + message);
+  } catch (ignore) {}
 }

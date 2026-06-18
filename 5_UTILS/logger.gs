@@ -737,3 +737,40 @@ function GFP_LOG_HUMANO_DATE_VALUE_16_1_4_(value) {
 
   return 0;
 }
+
+/**
+ * GFP 16.1.18.22 — Ponte mínima de compatibilidade.
+ *
+ * Mantém suporte a módulos antigos que ainda chamam GFP_SYS_LOG_15_9_7(),
+ * sem depender dos arquivos legados da pasta 6_GOVERNANCA.
+ *
+ * Esta função NÃO recria observabilidade antiga, não cria abas legadas
+ * e apenas encaminha o log para o logger humano atual.
+ */
+function GFP_SYS_LOG_15_9_7(modulo, acao, status, detalhe, payload) {
+  try {
+    const area = GFP_LOG_HUMANO_AREA_16_1_4_(modulo || acao || "", detalhe || "");
+    const classified = GFP_LOG_HUMANO_CLASSIFICAR_16_1_4_(
+      detalhe || acao || modulo || "Evento registrado.",
+      area,
+      status || "INFO",
+      null
+    );
+
+    if (!classified || classified.keep === false) {
+      return;
+    }
+
+    GFP_LOG_HUMANO_APPEND_16_1_4_(
+      classified.level || status || "INFO",
+      classified.area || area,
+      classified.message || detalhe || acao || modulo || "Evento registrado.",
+      ""
+    );
+
+  } catch (e) {
+    try {
+      Logger.log(String(detalhe || acao || modulo || "Evento registrado."));
+    } catch (ignore) {}
+  }
+}

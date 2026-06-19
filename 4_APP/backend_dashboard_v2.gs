@@ -177,7 +177,7 @@ function apiDashboardV2GetData(filters) {
   });
 
   result.series = GFP_DASH_V2_buildSeries_(allParsed, year, month, accountFilter, statusFilter);
-  result.parcelamentos = GFP_DASH_V2_BUILD_PARCELAMENTOS_16_1_6_(allParsed, {
+  result.parcelamentos = GFP_DASH_V2_BUILD_PARCELAMENTOS_MERGE_32C(allParsed, {
     year: year,
     month: month,
     accountFilter: accountFilter

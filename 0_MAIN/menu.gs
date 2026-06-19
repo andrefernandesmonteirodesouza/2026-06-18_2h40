@@ -7,6 +7,23 @@
  * Sem auditorias, sem saúde técnica, sem relatórios e sem comandos de manutenção expostos.
  */
 
+// =============================================================================
+// CONFIGURAÇÃO GLOBAL ESSENCIAL — GFP 16.1.18.30
+// =============================================================================
+// O antigo setup.gs foi removido por ser legado e conter installProject().
+// Porém, PROJECT_CONFIG é uma configuração global ainda usada pela importação,
+// backup e módulos de Drive. Mantemos somente a configuração, sem setup legado.
+
+var PROJECT_CONFIG = {
+  APP_NAME: "GFP - Gestão Financeira Pessoal",
+  VERSION: "16.1.18.30",
+  LOG_SHEET_NAME: "SYS_LOGS",
+  DATA_SHEET_NAME: "DB_TRANSACOES",
+  PLANO_CONTAS_SHEET_NAME: "CFG_Categorias",
+  FOLDER_ID_IMPORTS: "17a0Q-pn-Q-rRJbUfI0zz72bDAo1bUmtc",
+  TIMEZONE: "America/Sao_Paulo"
+};
+
 function onOpen() {
   const ui = SpreadsheetApp.getUi();
 
@@ -21,6 +38,9 @@ function onOpen() {
     .addItem('📊 Dashboard', 'abrirDashboardV2Wrapper')
     .addSeparator()
     .addItem('✂️ Dividir Lançamento', 'manualSplitWrapper')
+    .addItem('💳 Cadastrar Parcelamento Manual', 'GFP_PARC_MANUAIS_OPEN_CADASTRO_16_1_18_32')
+    .addItem('💳 Dividir como Fatura Manual', 'GFP_FATURA_MANUAL_OPEN_16_1_18_32B')
+    .addSeparator()
     .addItem('📦 Arquivar Linhas OK', 'archiveOkRowsWrapper')
     .addItem('🗃️ Histórico Arquivado / Desarquivar', 'openHistoricoArquivadoWrapper')
     .addItem('↩️ Estornos / Cancelamentos', 'GFP_MENU_ESTORNOS_CANCELAMENTOS_16_1_11')

@@ -15,7 +15,7 @@
  * -----------------------------------------------------------------------------
  */
 
-const GFP_DASH_V2_VERSION = "15.5.0";
+const GFP_DASH_V2_VERSION = "16.1.18.32C";
 const GFP_DASH_V2_DB = "DB_TRANSACOES";
 
 /**
@@ -79,6 +79,14 @@ function apiDashboardV2GetOptions() {
     if (!parsed.validDate && !parsed.effectiveMonth) return;
 
     if (parsed.account) accountsSet[parsed.account] = true;
+
+    // GFP 16.1.18.32C — no Dashboard de Parcelamentos,
+    // linhas de [FATURA MANUAL] devem aparecer pelo cartão de origem,
+    // não apenas pela conta de caixa que pagou a fatura.
+    const parcDisplayAccount = GFP_DASH_V2_PARC_DISPLAY_ACCOUNT_16_1_18_32C_(parsed);
+    if (parcDisplayAccount && parcDisplayAccount !== parsed.account) {
+      accountsSet[parcDisplayAccount] = true;
+    }
 
     const mk = parsed.effectiveMonth;
     if (!mk) return;
@@ -1159,6 +1167,64 @@ function GFP_DASHBOARD_V2_AUDIT_write_15_5_(ss, issues, stats) {
 }
 
 /**
+ * GFP 16.1.18.32C — Conta/cartão de exibição para a aba Parcelamentos.
+ *
+ * Regra:
+ * - Para lançamentos normais/importados: usa item.account normalmente.
+ * - Para linhas criadas por [FATURA MANUAL]: usa meta.cartao como cartão de origem.
+ *
+ * Importante:
+ * A coluna CONTA da DB_TRANSACOES continua correta como caixa real
+ * — exemplo: PicPay André pagou a fatura.
+ * Este helper muda apenas a leitura visual do Dashboard de Parcelamentos.
+ */
+function GFP_DASH_V2_PARC_DISPLAY_ACCOUNT_16_1_18_32C_(item) {
+  item = item || {};
+
+  const meta = item.meta || {};
+  const desc = String(item.description || "").trim();
+  const origin = String(meta.origin || "").trim();
+
+  const isFaturaManual =
+    /^\[FATURA MANUAL\]/i.test(desc) ||
+    /FATURA_MANUAL/i.test(origin);
+
+  if (isFaturaManual) {
+    const candidates = [
+      meta.cartao,
+      meta.cartaoOrigem,
+      meta.card,
+      meta.cardName,
+      meta.creditCard,
+      meta.cartaoManual
+    ];
+
+    for (let i = 0; i < candidates.length; i++) {
+      const v = String(candidates[i] || "").trim();
+      if (v) return v;
+    }
+  }
+
+  return String(item.account || "").trim() || "Sem cartão";
+}
+
+/**
+ * GFP 16.1.18.32C — Filtro de conta/cartão para Parcelamentos.
+ *
+ * Para fatura manual, compara o filtro com o cartão de origem exibido.
+ * Para itens normais, compara com item.account.
+ */
+function GFP_DASH_V2_PARC_ACCOUNT_MATCH_16_1_18_32C_(item, accountFilter) {
+  accountFilter = String(accountFilter || "Tudo").trim();
+
+  if (accountFilter === "Tudo") return true;
+
+  const displayAccount = GFP_DASH_V2_PARC_DISPLAY_ACCOUNT_16_1_18_32C_(item);
+  const realAccount = String((item && item.account) || "").trim();
+
+  return displayAccount === accountFilter || realAccount === accountFilter;
+}
+/**
  * =============================================================================
  * 🔮 GFP 16.1.6 — DASHBOARD 2.0 / PARCELAMENTOS
  * =============================================================================
@@ -1184,7 +1250,7 @@ function GFP_DASH_V2_BUILD_PARCELAMENTOS_16_1_6_(allParsed, opts) {
   allParsed.forEach(function(item) {
     if (!item) return;
 
-    if (accountFilter !== "Tudo" && item.account !== accountFilter) return;
+    if (!GFP_DASH_V2_PARC_ACCOUNT_MATCH_16_1_18_32C_(item, accountFilter)) return;
 
     const tipo = String(item.tipo || "").toUpperCase();
     if (tipo === "T" || tipo === "S") return;
@@ -1238,7 +1304,7 @@ function GFP_DASH_V2_BUILD_PARCELAMENTOS_16_1_6_(allParsed, opts) {
       if (!monthMap[dueMonth]) monthMap[dueMonth] = 0;
       monthMap[dueMonth] += monthlyAbs;
 
-      const card = item.account || "Sem cartão";
+      const card = GFP_DASH_V2_PARC_DISPLAY_ACCOUNT_16_1_18_32C_(item);
       if (!cardMap[card]) cardMap[card] = 0;
       cardMap[card] += monthlyAbs;
 
@@ -1254,7 +1320,7 @@ function GFP_DASH_V2_BUILD_PARCELAMENTOS_16_1_6_(allParsed, opts) {
         installmentLabel: p + "/" + inst.total,
         value: monthlyValue,
         valueAbs: monthlyAbs,
-        account: item.account || "",
+        account: GFP_DASH_V2_PARC_DISPLAY_ACCOUNT_16_1_18_32C_(item),
         category: item.category || "",
         monthsLeft: GFP_DASH_V2_PARC_MONTH_DIFF_16_1_6_(startDate, due),
         rowNumber: item.rowNumber,
@@ -1267,7 +1333,7 @@ function GFP_DASH_V2_BUILD_PARCELAMENTOS_16_1_6_(allParsed, opts) {
 
       endings.push({
         description: cleanDesc,
-        account: item.account || "",
+        account: GFP_DASH_V2_PARC_DISPLAY_ACCOUNT_16_1_18_32C_(item),
         category: item.category || "",
         monthlyValue: monthlyValue,
         monthlyAbs: monthlyAbs,
@@ -1380,7 +1446,7 @@ function GFP_DASH_V2_PARC_PARSE_INSTALLMENT_16_1_6_(item) {
 function GFP_DASH_V2_PARC_KEY_16_1_6_(item, inst) {
   return [
     GFP_DASH_V2_PARC_CLEAN_DESC_16_1_6_(item.description).toUpperCase(),
-    String(item.account || "").toUpperCase(),
+    String(GFP_DASH_V2_PARC_DISPLAY_ACCOUNT_16_1_18_32C_(item) || "").toUpperCase(),
     String(item.category || "").toUpperCase(),
     String(inst.total || ""),
     String(Math.abs(Number(item.value || 0)).toFixed(2))

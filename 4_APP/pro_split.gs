@@ -1851,6 +1851,100 @@ function GFP_DASH_V2_BUILD_PARCELAMENTOS_MERGE_32C(allParsed, opts) {
 }
 
 /**
+ * GFP 16.1.18.32C.1 — normaliza competência da DB_PARCELAMENTOS_MANUAIS.
+ *
+ * Motivo:
+ * no Sheets, a coluna COMPETENCIA pode parecer "2026-07", mas chegar ao
+ * Apps Script como Date: Wed Jul 01 2026 00:00:00 GMT-0300.
+ * O Dashboard precisa sempre trabalhar com chave yyyy-MM.
+ */
+function GFP_DASH_V2_PARC_MANUAL_COMP_KEY_32C1_(v) {
+  const tz = Session.getScriptTimeZone() || "America/Sao_Paulo";
+
+  if (v instanceof Date && !isNaN(v.getTime())) {
+    return Utilities.formatDate(v, tz, "yyyy-MM");
+  }
+
+  const txt = String(v || "").trim();
+  if (!txt) return "";
+
+  let m = txt.match(/^(20\d{2})-(\d{2})$/);
+  if (m) return m[1] + "-" + m[2];
+
+  m = txt.match(/^(20\d{2})\/(\d{2})$/);
+  if (m) return m[1] + "-" + m[2];
+
+  m = txt.match(/^(\d{1,2})\/(\d{1,2})\/(20\d{2})$/);
+  if (m) return m[3] + "-" + String(m[2]).padStart(2, "0");
+
+  const parsed = new Date(txt);
+  if (parsed instanceof Date && !isNaN(parsed.getTime())) {
+    return Utilities.formatDate(parsed, tz, "yyyy-MM");
+  }
+
+  return txt.replace(/\//g, "-");
+}
+
+/**
+ * GFP 16.1.18.32C.1 — normaliza data prevista manual.
+ */
+function GFP_DASH_V2_PARC_MANUAL_DATE_32C1_(v, competenciaKey) {
+  const tz = Session.getScriptTimeZone() || "America/Sao_Paulo";
+
+  if (v instanceof Date && !isNaN(v.getTime())) {
+    return v;
+  }
+
+  const txt = String(v || "").trim();
+
+  let m = txt.match(/^(\d{1,2})\/(\d{1,2})\/(20\d{2})$/);
+  if (m) {
+    return new Date(Number(m[3]), Number(m[2]) - 1, Number(m[1]));
+  }
+
+  m = txt.match(/^(20\d{2})-(\d{2})-(\d{2})$/);
+  if (m) {
+    return new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+  }
+
+  const parsed = new Date(txt);
+  if (parsed instanceof Date && !isNaN(parsed.getTime())) {
+    return parsed;
+  }
+
+  const comp = GFP_DASH_V2_PARC_MANUAL_COMP_KEY_32C1_(competenciaKey);
+  const mc = comp.match(/^(20\d{2})-(\d{2})$/);
+  if (mc) {
+    return new Date(Number(mc[1]), Number(mc[2]) - 1, 10);
+  }
+
+  return new Date();
+}
+
+/**
+ * GFP 16.1.18.32C.1 — rótulos seguros para série mensal do Dashboard.
+ */
+function GFP_DASH_V2_PARC_MANUAL_MONTH_LABEL_32C1_(monthKey) {
+  const mk = GFP_DASH_V2_PARC_MANUAL_COMP_KEY_32C1_(monthKey);
+
+  if (typeof GFP_DASH_V2_monthLabel_ === "function") {
+    return GFP_DASH_V2_monthLabel_(mk);
+  }
+
+  return mk;
+}
+
+function GFP_DASH_V2_PARC_MANUAL_MONTH_SHORT_32C1_(monthKey) {
+  const mk = GFP_DASH_V2_PARC_MANUAL_COMP_KEY_32C1_(monthKey);
+
+  if (typeof GFP_DASH_V2_monthLabelShort_ === "function") {
+    return GFP_DASH_V2_monthLabelShort_(mk) + "/" + mk.slice(2, 4);
+  }
+
+  return mk;
+}
+
+/**
  * Constrói os dados de parcelamentos a partir da DB_PARCELAMENTOS_MANUAIS,
  * no mesmo formato esperado pelo Dashboard V2.
  *
@@ -1864,6 +1958,7 @@ function GFP_DASH_V2_PARC_MANUAIS_BUILD_32C_(opts) {
   const month = Number(opts.month || (new Date().getMonth() + 1));
   const startMonth = year + "-" + String(month).padStart(2, "0");
   const startDate  = new Date(year, month - 1, 1);
+  const accountFilter = String(opts.accountFilter || "Tudo").trim();
   const tz = Session.getScriptTimeZone() || "America/Sao_Paulo";
 
   // Busca todas as parcelas PREVISTAS e PENDENTES
@@ -1886,7 +1981,7 @@ function GFP_DASH_V2_PARC_MANUAIS_BUILD_32C_(opts) {
   const installments = [];
 
   todas.forEach(function(p) {
-    const competencia = String(p.COMPETENCIA || "");
+    const competencia = GFP_DASH_V2_PARC_MANUAL_COMP_KEY_32C1_(p.COMPETENCIA || p.DATA_PREVISTA);
     if (!competencia || competencia < startMonth) return; // ignora passado
 
     const valorAbs = Math.abs(Number(p.VALOR_PARCELA || 0));
@@ -1894,19 +1989,17 @@ function GFP_DASH_V2_PARC_MANUAIS_BUILD_32C_(opts) {
 
     const parcAtual = Number(p.PARC_ATUAL || 1);
     const parcTotal = Number(p.PARC_TOTAL || 1);
-    const cartao    = String(p.CARTAO || "Sem cartão");
+    const cartao    = String(p.CARTAO || "Sem cartão").trim();
     const descricao = String(p.DESCRICAO || "");
     const categoria = String(p.CATEGORIA || "");
     const grupoDono = String(p.GRUPO_DONO || "");
 
+    // Respeita o filtro visual CONTA/CARTÃO do Dashboard.
+    // Ex.: ao selecionar Bradesco André, não deve entrar Nubank André.
+    if (accountFilter !== "Tudo" && cartao !== accountFilter) return;
+
     // Data prevista para ordenação
-    let dataPrevista = p.DATA_PREVISTA;
-    if (!(dataPrevista instanceof Date) || isNaN(dataPrevista)) {
-      const m = competencia.match(/^(\d{4})-(\d{2})$/);
-      dataPrevista = m
-        ? new Date(Number(m[1]), Number(m[2]) - 1, 10)
-        : startDate;
-    }
+    let dataPrevista = GFP_DASH_V2_PARC_MANUAL_DATE_32C1_(p.DATA_PREVISTA, competencia);
 
     const dueKey   = Utilities.formatDate(dataPrevista, tz, "yyyy-MM-dd");
     const dueLabelBr = Utilities.formatDate(dataPrevista, tz, "dd/MM/yyyy");
@@ -1927,7 +2020,7 @@ function GFP_DASH_V2_PARC_MANUAIS_BUILD_32C_(opts) {
       dueKey: dueKey,
       dueLabel: dueLabelBr,
       monthKey: competencia,
-      monthLabel: competencia,  // será formatado pelo Dashboard
+      monthLabel: GFP_DASH_V2_PARC_MANUAL_MONTH_LABEL_32C1_(competencia),
       description: descricao,
       installmentLabel: parcAtual + "/" + parcTotal,
       value: -valorAbs,         // despesa = negativo
@@ -1961,7 +2054,12 @@ function GFP_DASH_V2_PARC_MANUAIS_BUILD_32C_(opts) {
 
   // Série mensal (próximos 18 meses)
   const series = Object.keys(monthMap).sort().slice(0, 18).map(function(m) {
-    return { monthKey: m, label: m, fullLabel: m, value: monthMap[m] || 0 };
+    return {
+      monthKey: m,
+      label: GFP_DASH_V2_PARC_MANUAL_MONTH_SHORT_32C1_(m),
+      fullLabel: GFP_DASH_V2_PARC_MANUAL_MONTH_LABEL_32C1_(m),
+      value: monthMap[m] || 0
+    };
   });
 
   // Cards
@@ -1983,7 +2081,7 @@ function GFP_DASH_V2_PARC_MANUAIS_BUILD_32C_(opts) {
       current: g.parcAtual,
       total: g.parcTotal,
       finalMonth: g.competencia,
-      finalMonthLabel: g.competencia,
+      finalMonthLabel: GFP_DASH_V2_PARC_MANUAL_MONTH_LABEL_32C1_(g.competencia),
       finalDateLabel: Utilities.formatDate(g.dataPrevista, tz, "dd/MM/yyyy"),
       grupoDono: g.grupoDono,
       origem: "MANUAL"
@@ -2050,14 +2148,21 @@ function GFP_DASH_V2_PARC_MERGE_RESULTS_32C_(base, manuais, opts) {
 
   // Merge de séries mensais (soma por mês)
   const seriesMap = {};
-  (base.series || []).forEach(function(s) { seriesMap[s.monthKey] = (seriesMap[s.monthKey] || 0) + (s.value || 0); });
-  (manuais.series || []).forEach(function(s) { seriesMap[s.monthKey] = (seriesMap[s.monthKey] || 0) + (s.value || 0); });
+
+  function addSeries32C1_(s) {
+    const mk = GFP_DASH_V2_PARC_MANUAL_COMP_KEY_32C1_(s && s.monthKey);
+    if (!mk) return;
+    seriesMap[mk] = (seriesMap[mk] || 0) + (Number(s.value || 0));
+  }
+
+  (base.series || []).forEach(addSeries32C1_);
+  (manuais.series || []).forEach(addSeries32C1_);
 
   const allSeries = Object.keys(seriesMap).sort().slice(0, 18).map(function(m) {
     return {
       monthKey: m,
-      label: m,
-      fullLabel: m,
+      label: GFP_DASH_V2_PARC_MANUAL_MONTH_SHORT_32C1_(m),
+      fullLabel: GFP_DASH_V2_PARC_MANUAL_MONTH_LABEL_32C1_(m),
       value: seriesMap[m] || 0
     };
   });
@@ -2097,7 +2202,7 @@ function GFP_DASH_V2_PARC_MERGE_RESULTS_32C_(base, manuais, opts) {
     ok: true,
     version: "32C-merge",
     startMonth: startMonth,
-    startMonthLabel: startMonth,
+    startMonthLabel: GFP_DASH_V2_PARC_MANUAL_MONTH_LABEL_32C1_(startMonth),
     kpis: {
       totalFuture: totalFuture,
       nextMonthTotal: nextMonthTotal,

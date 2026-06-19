@@ -1155,7 +1155,9 @@ function GFP_FATURA_MANUAL_SAVE_SPLIT_16_1_18_32B(payload) {
     newRow[headers.CATEGORIA] = categoria;
     newRow[headers.PARC_ATUAL] = parcAtual || "";
     newRow[headers.PARC_TOTAL] = parcTotal || "";
-    newRow[headers.STATUS] = true;
+    // GFP 16.1.18.32B.10 — filhas da fatura manual já nascem arquiváveis.
+    // Mantém o padrão do Split normal: linhas filhas = OK.
+    newRow[headers.STATUS] = "OK";
     newRow[headers.NOTAS] =
       "Fatura manual confirmada | " + cartao + " | " + grupoDono + " | " + competencia +
       (parcTotal > 1 ? " | parcela " + parcAtual + "/" + parcTotal : "");
@@ -1203,7 +1205,9 @@ function GFP_FATURA_MANUAL_SAVE_SPLIT_16_1_18_32B(payload) {
   // Transforma linha mãe em SPLIT histórico
   sh.getRange(row, headers.TIPO + 1).setValue("S");
   sh.getRange(row, headers.CATEGORIA + 1).clearContent();
-  sh.getRange(row, headers.STATUS + 1).setValue(true);
+  // GFP 16.1.18.32B.10 — linha mãe técnica igual ao Split normal.
+  // A despesa real fica nas filhas; a mãe é apenas histórico.
+  sh.getRange(row, headers.STATUS + 1).setValue("SPLIT");
   sh.getRange(row, headers.NOTAS + 1).setValue(
     "Fatura manual dividida | splitId=" + splitId + " | itens=" + childRows.length
   );
@@ -2119,5 +2123,87 @@ function GFP_DASH_V2_PARC_MERGE_RESULTS_32C_(base, manuais, opts) {
         totalFuture: manuaisKpis.totalFuture || 0
       }
     }
+  };
+}
+
+/**
+ * GFP 16.1.18.32B.10 — Correção pontual de STATUS das faturas manuais já criadas.
+ *
+ * Corrige apenas linhas da DB_TRANSACOES com:
+ * - descrição iniciando por [FATURA MANUAL] e STATUS TRUE  → OK
+ * - descrição iniciando por [FATURA MANUAL DIVIDIDA] e STATUS TRUE → SPLIT
+ *
+ * Não mexe em importação, DRE, Dashboard, parcelamentos, categorias ou valores.
+ * Pode ser executada uma única vez após instalar o patch.
+ */
+function GFP_FATURA_MANUAL_CORRIGIR_STATUS_TRUE_16_1_18_32B10() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sh = ss.getSheetByName("DB_TRANSACOES");
+
+  if (!sh) {
+    throw new Error("DB_TRANSACOES não encontrada.");
+  }
+
+  if (sh.getLastRow() < 2) {
+    return {
+      ok: true,
+      filhosCorrigidos: 0,
+      maesCorrigidas: 0
+    };
+  }
+
+  const headers = GFP_FATURA_MANUAL_MAP_DB_HEADERS_16_1_18_32B_(sh);
+  const width = sh.getLastColumn();
+  const range = sh.getRange(2, 1, sh.getLastRow() - 1, width);
+  const values = range.getValues();
+
+  let filhosCorrigidos = 0;
+  let maesCorrigidas = 0;
+
+  values.forEach(function(row) {
+    const desc = String(row[headers.DESCRICAO] || "").trim();
+    const statusRaw = row[headers.STATUS];
+    const statusTxt = String(statusRaw || "").trim().toUpperCase();
+
+    const statusEhTrue = statusRaw === true || statusTxt === "TRUE";
+
+    if (!statusEhTrue) return;
+
+    if (/^\[FATURA MANUAL DIVIDIDA\]/i.test(desc)) {
+      row[headers.STATUS] = "SPLIT";
+      maesCorrigidas++;
+      return;
+    }
+
+    if (/^\[FATURA MANUAL\]/i.test(desc)) {
+      row[headers.STATUS] = "OK";
+      filhosCorrigidos++;
+      return;
+    }
+  });
+
+  range.setValues(values);
+
+  try {
+    if (typeof GFP_LOG_HUMANO_APPEND_16_1_4_ === "function") {
+      GFP_LOG_HUMANO_APPEND_16_1_4_(
+        "OK",
+        "Fatura Manual",
+        "Correção STATUS TRUE → OK/SPLIT | filhos=" + filhosCorrigidos + " | mães=" + maesCorrigidas,
+        ""
+      );
+    }
+  } catch (eLog) {}
+
+  ss.toast(
+    "STATUS corrigido: " + filhosCorrigidos + " filha(s) OK e " + maesCorrigidas + " mãe(s) SPLIT.",
+    "GFP — Fatura Manual",
+    8
+  );
+
+  return {
+    ok: true,
+    filhosCorrigidos: filhosCorrigidos,
+    maesCorrigidas: maesCorrigidas
   };
 }

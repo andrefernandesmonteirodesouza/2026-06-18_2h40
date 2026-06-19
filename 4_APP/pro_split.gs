@@ -1,8 +1,8 @@
 /**
  * 📂 ARQUIVO: 4_APP/pro_split.gs
  * ✂️ MÓDULO: DIVISOR DE TRANSAÇÕES + FATURA MANUAL + PARCELAMENTOS MANUAIS
- * 🔢 VERSÃO: 4.0 (PATCH 32A + 32B FIX + 32C — PARCELAMENTOS MANUAIS COMPLETO)
- * 📅 DATA: 2026-06-18
+ * 🔢 VERSÃO: 4.1 (PATCH 32A + 32B FIX DEFINITIVO + 32C — PARCELAMENTOS MANUAIS COMPLETO)
+ * 📅 DATA: 2026-06-19
  * 👤 AUTOR: André Fernandes (Sócio) & Claude (Arquiteto)
  * -----------------------------------------------------------------------------
  * 📝 RESUMO:
@@ -37,12 +37,33 @@
  * - V3.4 (PATCH 32B): Adição de "Dividir como Fatura Manual".
  *   [BUG]: createHtmlOutput usado em vez de createTemplate — google.script.run
  *   não funcionava no modal. Botão "Buscar parcelas previstas" era mudo.
- * - V4.0 (ATUAL — PATCH 32B FIX + 32C):
- *   > CORREÇÃO CRÍTICA: createHtmlOutput → createTemplate + initialData base64
- *     no GFP_FATURA_MANUAL_OPEN_16_1_18_32B. google.script.run agora funciona.
- *   > PATCH 32C: GFP_DASH_V2_PARCELAMENTOS_MANUAIS_16_1_18_32C() expõe os
+ * - V4.0 (PATCH 32B FIX TENTATIVA 1 + 32C):
+ *   > Trocado createHtmlOutput por createTemplate, com payload em base64 via
+ *     window.atob() no client-side, lido por scriptlet <?= initialData ?>.
+ *   [BUG PERSISTENTE]: O modal abria com todos os campos vazios (Linha
+ *     selecionada: Data: | Conta: | Total: R$ em branco) e o botão "Buscar
+ *     parcelas previstas" continuava sem efeito. Causa raiz identificada:
+ *     o scriptlet <?= ?> do HtmlService faz HTML-escape automático, e a
+ *     string base64 resultante era injetada dentro de um <script> que já
+ *     continha template literals aninhados (usados em addRow() do próprio
+ *     modal), criando ambiguidade no parser de scriptlets do Apps Script.
+ *     O try/catch ao redor do atob()/JSON.parse() mascarava a falha real,
+ *     devolvendo silenciosamente {} sem nenhum erro visível — por isso o
+ *     sintoma parecia "botão morto" quando na verdade o problema era a
+ *     hidratação inicial dos dados, anterior a qualquer clique no botão.
+ *   > PATCH 32C: GFP_DASH_V2_BUILD_PARCELAMENTOS_MERGE_32C() expõe os
  *     parcelamentos manuais no mesmo formato do Dashboard V2, para soma com
- *     PicPay importado. Chamada via GFP_DASH_V2_BUILD_PARCELAMENTOS_MERGE_32C().
+ *     PicPay importado.
+ * - V4.1 (ATUAL — PATCH 32B FIX DEFINITIVO):
+ *   > CORREÇÃO RAIZ: abandonado o esquema base64 + atob + <?= ?> (com
+ *     HTML-escape). Adotado JSON.stringify(payload) injetado diretamente
+ *     como literal JS via scriptlet RAW <?!= initialDataJson ?> (sem
+ *     HTML-escape), com neutralização cirúrgica de apenas 3 padrões que
+ *     poderiam quebrar o parsing (backtick, ${, </script>), via
+ *     GFP_FATURA_MANUAL_JSON_PARA_JS_16_1_18_32B_().
+ *   > BLINDAGEM DE ERRO: removido o try/catch silencioso. Se a hidratação
+ *     do INITIAL falhar por qualquer motivo, agora aparece um alert()
+ *     visível com a mensagem de erro real, em vez de objeto vazio mudo.
  *   > Regra de Diamante: código Gordelício, verbose, try/catch em tudo,
  *     logs detalhados, sem simplificação de funções existentes.
  * -----------------------------------------------------------------------------
@@ -847,22 +868,31 @@ function GFP_FATURA_MANUAL_OPEN_16_1_18_32B() {
     competenciaPadrao: competencia,
     categorias: GFP_PARC_MANUAIS_LISTAR_CATEGORIAS_16_1_18_32_()
   };
-
-  // CORREÇÃO V4.0: createTemplate em vez de createHtmlOutput.
-  // initialData é transmitido como base64 via propriedade do template,
-  // depois decodificado no client-side com window.atob + JSON.parse.
-  const tpl = HtmlService.createTemplate(GFP_FATURA_MANUAL_HTML_16_1_18_32B_());
-  tpl.initialData = Utilities.base64Encode(
-    JSON.stringify(payload),
-    Utilities.Charset.UTF_8
-  );
-
-  const html = tpl.evaluate()
+  // GFP 16.1.18.32B.6 — volta ao método que carregou corretamente os dados da linha.
+  // Sem createTemplate, sem tpl.evaluate, sem initialDataJson.
+  const html = HtmlService
+    .createHtmlOutput(GFP_FATURA_MANUAL_HTML_16_1_18_32B_(payload))
     .setWidth(1280)
     .setHeight(820)
     .setTitle("💳 Dividir como Fatura Manual");
 
   SpreadsheetApp.getUi().showModalDialog(html, "💳 Dividir como Fatura Manual");
+}
+
+/**
+ * GFP 16.1.18.32B.5 — Converte o payload em uma string JSON segura para ser
+ * inserida diretamente como literal JS dentro de um <script>, via scriptlet
+ * <?!= ?> (sem HTML-escape). Neutraliza backtick, ${, e fechamento de </script>
+ * para não quebrar o parsing do HTML nem do JS.
+ *
+ * Esta função substitui a abordagem anterior de base64 + atob, que se mostrou
+ * frágil dentro do contexto de template literals aninhados do Apps Script.
+ */
+function GFP_FATURA_MANUAL_JSON_PARA_JS_16_1_18_32B_(obj) {
+  return JSON.stringify(obj || {})
+    .replace(/`/g, "\\`")
+    .replace(/\$\{/g, "\\${")
+    .replace(/<\/script/gi, "<\\/script");
 }
 
 /**
@@ -878,30 +908,137 @@ function GFP_FATURA_MANUAL_BUSCAR_PREVISTAS_16_1_18_32B(filters) {
 
   GFP_PARC_MANUAIS_GARANTIR_ABA_16_1_18_32();
 
-  const lista = GFP_PARC_MANUAIS_LISTAR_PREVISTAS_16_1_18_32({
-    cartao: filters.cartao || "",
-    banco: filters.banco || "",
-    competencia: filters.competencia || "",
-    status: ["PENDENTE", "PREVISTA"]
-  });
+  function norm(v) {
+    return String(v || "")
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/\s+/g, " ")
+      .trim()
+      .toUpperCase();
+  }
 
-  return lista.map(function(p) {
-    return {
+  function competenciaToKey(v) {
+    if (!v) return "";
+
+    if (v instanceof Date && !isNaN(v.getTime())) {
+      return Utilities.formatDate(
+        v,
+        Session.getScriptTimeZone() || "America/Sao_Paulo",
+        "yyyy-MM"
+      );
+    }
+
+    const txt = String(v || "").trim();
+
+    // Já está no formato 2026-06
+    const m1 = txt.match(/^(\d{4})-(\d{2})$/);
+    if (m1) return m1[1] + "-" + m1[2];
+
+    // Formato 10/06/2026 ou 01/06/2026
+    const m2 = txt.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+    if (m2) return m2[3] + "-" + String(m2[2]).padStart(2, "0");
+
+    // Formato 2026/06
+    const m3 = txt.match(/^(\d{4})\/(\d{2})$/);
+    if (m3) return m3[1] + "-" + m3[2];
+
+    // Texto de Date convertido para string: Mon Jun 01 2026...
+    const parsed = new Date(txt);
+    if (parsed instanceof Date && !isNaN(parsed.getTime())) {
+      return Utilities.formatDate(
+        parsed,
+        Session.getScriptTimeZone() || "America/Sao_Paulo",
+        "yyyy-MM"
+      );
+    }
+
+    return txt.replace(/\//g, "-");
+  }
+
+  function dateToBr(v) {
+    if (!v) return "";
+
+    if (v instanceof Date && !isNaN(v.getTime())) {
+      return Utilities.formatDate(
+        v,
+        Session.getScriptTimeZone() || "America/Sao_Paulo",
+        "dd/MM/yyyy"
+      );
+    }
+
+    const txt = String(v || "").trim();
+
+    const parsed = new Date(txt);
+    if (parsed instanceof Date && !isNaN(parsed.getTime())) {
+      return Utilities.formatDate(
+        parsed,
+        Session.getScriptTimeZone() || "America/Sao_Paulo",
+        "dd/MM/yyyy"
+      );
+    }
+
+    return txt;
+  }
+
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sh = ss.getSheetByName(GFP_PARC_MANUAIS_SHEET_16_1_18_32);
+
+  if (!sh || sh.getLastRow() < 2) {
+    return [];
+  }
+
+  const width = GFP_PARC_MANUAIS_HEADERS_16_1_18_32.length;
+  const values = sh.getRange(2, 1, sh.getLastRow() - 1, width).getValues();
+
+  const fCartao = norm(filters.cartao);
+  const fBanco = norm(filters.banco);
+  const fCompetencia = competenciaToKey(filters.competencia);
+
+  const statusPermitidos = {
+    PENDENTE: true,
+    PREVISTA: true
+  };
+
+  const out = [];
+
+  values.forEach(function(r, idx) {
+    const p = GFP_PARC_MANUAIS_ROW_TO_OBJECT_16_1_18_32_(r, idx + 2);
+
+    const status = norm(p.STATUS);
+    const cartao = norm(p.CARTAO);
+    const banco = norm(p.BANCO);
+    const competenciaKey = competenciaToKey(p.COMPETENCIA);
+
+    if (!statusPermitidos[status]) return;
+
+    if (fCartao && cartao !== fCartao) return;
+    if (fBanco && banco !== fBanco) return;
+    if (fCompetencia && competenciaKey !== fCompetencia) return;
+
+    out.push({
       idParcelamento: p.ID_PARCELAMENTO,
-      status: p.STATUS,
-      cartao: p.CARTAO,
-      banco: p.BANCO,
-      grupoDono: p.GRUPO_DONO,
-      descricao: p.DESCRICAO,
-      categoria: p.CATEGORIA,
-      valorAbs: Math.abs(Number(p.VALOR_PARCELA || 0)),
+      status: String(p.STATUS || "").trim(),
+      cartao: String(p.CARTAO || "").trim(),
+      banco: String(p.BANCO || "").trim(),
+      grupoDono: String(p.GRUPO_DONO || "").trim(),
+      descricao: String(p.DESCRICAO || "").trim(),
+      categoria: String(p.CATEGORIA || "").trim(),
+      valorAbs: Math.abs(GFP_PARC_MANUAIS_PARSE_VALOR_16_1_18_32_(p.VALOR_PARCELA)),
       parcAtual: Number(p.PARC_ATUAL || 1),
       parcTotal: Number(p.PARC_TOTAL || 1),
-      competencia: p.COMPETENCIA,
-      dataPrevista: GFP_FATURA_MANUAL_FORMAT_DATE_16_1_18_32B_(p.DATA_PREVISTA),
+      competencia: competenciaKey,
+      dataPrevista: dateToBr(p.DATA_PREVISTA),
       origem: "DB_PARCELAMENTOS_MANUAIS"
-    };
+    });
   });
+
+  out.sort(function(a, b) {
+    const da = String(a.competencia || "") + "|" + String(a.descricao || "");
+    const db = String(b.competencia || "") + "|" + String(b.descricao || "");
+    return da.localeCompare(db);
+  });
+
+  return out;
 }
 
 /**
@@ -1243,13 +1380,27 @@ function GFP_FATURA_MANUAL_PARSE_VALOR_16_1_18_32B_(value) {
 /**
  * Retorna o HTML do modal "Dividir como Fatura Manual".
  *
- * CORREÇÃO V4.0: O payload NÃO é mais interpolado diretamente no HTML.
- * Em vez disso, usa o scriptlet <?= initialData ?> do createTemplate
- * para injetar o base64 codificado no servidor. O client-side decodifica
- * com window.atob + JSON.parse. Isso garante que google.script.run
- * funcione corretamente no contexto do modal do Apps Script.
+ * CORREÇÃO V4.1: O payload é injetado via scriptlet RAW <?!= initialDataJson ?>
+ * (sem HTML-escape), como JSON.stringify diretamente no corpo de um <script>.
+ * A versão V4.0 usava base64 + window.atob() + <?= ?> (com HTML-escape), que
+ * se mostrou frágil: <?= ?> faz escaping de caracteres, e a string base64
+ * residia dentro de um <script> que já contém template literals aninhados
+ * (usados em addRow()), criando ambiguidade no parser de scriptlets do
+ * Apps Script. O resultado observado era INITIAL = {} silenciosamente,
+ * sem erro visível — o try/catch mascarava a falha real.
+ * A V4.1 usa <?!= ?> (raw) para evitar qualquer HTML-escape no JSON, e
+ * neutraliza apenas os 3 padrões que poderiam quebrar o parsing
+ * (backtick, ${, </script>) via GFP_FATURA_MANUAL_JSON_PARA_JS_16_1_18_32B_.
+ * Em caso de falha, agora o erro aparece em alert() visível, nunca mascarado.
  */
-function GFP_FATURA_MANUAL_HTML_16_1_18_32B_() {
+function GFP_FATURA_MANUAL_HTML_16_1_18_32B_(data) {
+  // GFP 16.1.18.32B.6 — volta ao modo que carregou corretamente os dados:
+  // payload direto no HTML, sem createTemplate, sem base64, sem atob.
+  const json = JSON.stringify(data || {})
+    .replace(/</g, "\\u003c")
+    .replace(/>/g, "\\u003e")
+    .replace(/&/g, "\\u0026");
+
   return `<!DOCTYPE html>
 <html>
 <head>
@@ -1303,6 +1454,8 @@ function GFP_FATURA_MANUAL_HTML_16_1_18_32B_() {
     <button class="btn-gray" onclick="addRow(null)">+ Adicionar item novo</button>
   </div>
 
+  <div id="msgBusca" style="display:none; margin: 0 0 10px 0; padding: 10px; border-radius: 8px; background:#fff7ed; border:1px solid #fed7aa; color:#9a3412; font-size:12px;"></div>
+
   <div class="tablebox">
     <table>
       <thead>
@@ -1351,17 +1504,7 @@ function GFP_FATURA_MANUAL_HTML_16_1_18_32B_() {
 </div>
 
 <script>
-  // CORREÇÃO V4.0: INITIAL é decodificado do base64 injetado pelo createTemplate.
-  // Isso garante que google.script.run funcione (createHtmlOutput não disponibiliza o objeto).
-  const INITIAL = (function() {
-    try {
-      const raw = window.atob("<?= initialData ?>");
-      const decoded = decodeURIComponent(escape(raw));
-      return JSON.parse(decoded);
-    } catch(e) {
-      return {};
-    }
-  })();
+  const INITIAL = ${json};
 
   function money(n) {
     return Number(n||0).toLocaleString("pt-BR",{minimumFractionDigits:2,maximumFractionDigits:2});
@@ -1443,6 +1586,20 @@ function GFP_FATURA_MANUAL_HTML_16_1_18_32B_() {
     updateTotals();
   }
 
+    function mostrarMsgBusca(txt) {
+    const box = document.getElementById("msgBusca");
+    if (!box) return;
+
+    if (!txt) {
+      box.style.display = "none";
+      box.innerText = "";
+      return;
+    }
+
+    box.style.display = "block";
+    box.innerText = txt;
+  }
+
   function buscarPrevistas() {
     const btn = document.getElementById("btnBuscar");
     const oldText = btn ? btn.innerText : "Buscar parcelas previstas";
@@ -1453,7 +1610,12 @@ function GFP_FATURA_MANUAL_HTML_16_1_18_32B_() {
       competencia: document.getElementById("competencia").value
     };
 
-    if (btn) { btn.disabled = true; btn.innerText = "Buscando..."; }
+    mostrarMsgBusca("");
+
+    if (btn) {
+      btn.disabled = true;
+      btn.innerText = "Buscando...";
+    }
 
     google.script.run
       .withSuccessHandler(function(lista) {
@@ -1461,12 +1623,21 @@ function GFP_FATURA_MANUAL_HTML_16_1_18_32B_() {
 
         if (lista.length) {
           renderParcelas(lista);
-          if (btn) { btn.disabled = false; btn.innerText = oldText; }
+          mostrarMsgBusca("Parcelas encontradas: " + lista.length + ".");
+
+          if (btn) {
+            btn.disabled = false;
+            btn.innerText = oldText;
+          }
+
           return;
         }
 
-        // Fallback: busca sem filtro de competência para mostrar outras previstas do cartão
-        const fallback = { cartao: filters.cartao, banco: filters.banco, competencia: "" };
+        const fallback = {
+          cartao: filters.cartao,
+          banco: filters.banco,
+          competencia: ""
+        };
 
         google.script.run
           .withSuccessHandler(function(listaFallback) {
@@ -1474,35 +1645,52 @@ function GFP_FATURA_MANUAL_HTML_16_1_18_32B_() {
 
             if (listaFallback.length) {
               renderParcelas(listaFallback);
-              alert(
-                "Nenhuma parcela para a competência " + (filters.competencia || "informada") + ".\n\n" +
-                "Mostrando " + listaFallback.length + " parcela(s) deste cartão em outras competências.\n\n" +
-                "Confira antes de confirmar."
+              mostrarMsgBusca(
+                "Não encontrei parcelas para a competência " +
+                (filters.competencia || "informada") +
+                ", mas encontrei " +
+                listaFallback.length +
+                " parcela(s) deste cartão/banco em outras competências."
               );
             } else {
               document.getElementById("tbody").innerHTML = "";
               addRow(null);
-              alert(
-                "Nenhuma parcela prevista encontrada para:\n\n" +
-                "Cartão: " + (filters.cartao || "-") + "\n" +
-                "Banco: " + (filters.banco || "-") + "\n" +
-                "Competência: " + (filters.competencia || "-") + "\n\n" +
-                "Adicione os itens manualmente."
+
+              mostrarMsgBusca(
+                "Nenhuma parcela prevista encontrada para: Cartão " +
+                (filters.cartao || "-") +
+                " | Banco " +
+                (filters.banco || "-") +
+                " | Competência " +
+                (filters.competencia || "-") +
+                ". Você pode adicionar os itens manualmente."
               );
             }
 
-            if (btn) { btn.disabled = false; btn.innerText = oldText; }
+            if (btn) {
+              btn.disabled = false;
+              btn.innerText = oldText;
+            }
+
             updateTotals();
           })
           .withFailureHandler(function(err) {
-            if (btn) { btn.disabled = false; btn.innerText = oldText; }
-            alert(err && err.message ? err.message : String(err));
+            if (btn) {
+              btn.disabled = false;
+              btn.innerText = oldText;
+            }
+
+            mostrarMsgBusca(err && err.message ? err.message : String(err));
           })
           .GFP_FATURA_MANUAL_BUSCAR_PREVISTAS_16_1_18_32B(fallback);
       })
       .withFailureHandler(function(err) {
-        if (btn) { btn.disabled = false; btn.innerText = oldText; }
-        alert(err && err.message ? err.message : String(err));
+        if (btn) {
+          btn.disabled = false;
+          btn.innerText = oldText;
+        }
+
+        mostrarMsgBusca(err && err.message ? err.message : String(err));
       })
       .GFP_FATURA_MANUAL_BUSCAR_PREVISTAS_16_1_18_32B(filters);
   }

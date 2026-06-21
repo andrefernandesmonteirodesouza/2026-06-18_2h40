@@ -1,16 +1,34 @@
 /**
  * 📂 ARQUIVO: 4_APP/backend_server.gs
  * 🖥️ MÓDULO: ROTEADOR DE INTERFACES & CONTROLADOR CENTRAL (DIAMOND EDITION)
- * 🔢 VERSÃO: 9.1 (FULL INTEGRITY + CLEANER FIX)
- * 📅 DATA: 26/12/2025
- * 👤 AUTOR: André Fernandes (Sócio) & Gemini (Arquiteto de Soluções)
+ * 🔢 VERSÃO: 9.2 (PATCH 32D — MIC BRIDGE EXTERNO)
+ * 📅 DATA: 21/06/2026
+ * 👤 AUTOR: André Fernandes (Sócio) & Gemini (Arquiteto de Soluções) & Claude (Patch 32D)
  * -----------------------------------------------------------------------------
- * 📝 RESUMO:
- * - Mantém TODAS as funcionalidades de Voz, NLP e Parcelamento.
- * - Corrige a API do Painel para limpar cor amarela e checkbox.
- * - Corrige a ordem de leitura das transações (Crescente).
+ * 📝 RESUMO / HISTÓRICO:
+ * - v9.1 (26/12/2025): Mantém TODAS as funcionalidades de Voz, NLP e Parcelamento.
+ *   Corrige a API do Painel para limpar cor amarela e checkbox.
+ *   Corrige a ordem de leitura das transações (Crescente).
+ * - v9.2 / PATCH 32D (21/06/2026): O Google passou a bloquear getUserMedia()
+ *   (microfone) dentro do iframe sandboxed do HtmlService em TODOS os
+ *   navegadores (Chrome, Edge, Safari/iOS), inclusive em aba anônima —
+ *   restrição de Permissions Policy no nível da própria infraestrutura do
+ *   Apps Script, confirmada na doc oficial do Google
+ *   (developers.google.com/apps-script/guides/support/troubleshooting).
+ *   Não havia regressão de código: 6 backups de 13/06 a 18/06 são
+ *   byte-idênticos neste trecho.
+ *   SOLUÇÃO: o botão GRAVAR agora abre uma página-ponte externa
+ *   (mic-bridge.html, hospedada fora do Apps Script, ex: GitHub Pages),
+ *   que grava o áudio em contexto top-level real (sem restrição) e devolve
+ *   o resultado via postMessage para esta janela, que então chama
+ *   processAudio() normalmente. Nenhuma outra funcionalidade foi alterada.
  * -----------------------------------------------------------------------------
  */
+
+// 🌉 PATCH 32D: URL da página-ponte de gravação de áudio (GitHub Pages).
+// IMPORTANTE: troque pelo link real assim que o GitHub Pages estiver no ar.
+// Formato esperado: https://SEU-USUARIO.github.io/SEU-REPO/
+const MIC_BRIDGE_URL = "https://andrefernandesmonteirodesouza.github.io/gfp-mic-bridge/";
 
 function doGet(e) {
   e = e || {};
@@ -155,7 +173,7 @@ function renderVoiceInterface(usuario) {
         <div class="hint">Fale, Digite ou Tire Foto</div>
         
         <div class="action-grid">
-          <button id="btnGravar" class="btn-big btn-mic" onclick="toggleRecording()">
+          <button id="btnGravar" class="btn-big btn-mic" onclick="openMicBridge()">
             <span style="font-size:24px">🎙️</span>
             <span>GRAVAR</span>
           </button>
@@ -176,42 +194,44 @@ function renderVoiceInterface(usuario) {
         <script>
           const USUARIO = "${usuario}";
           
-          // --- ÁUDIO ---
-          let mediaRecorder, audioChunks = [], isRecording = false;
-          async function toggleRecording() {
-            const btn = document.getElementById('btnGravar');
-            if (!isRecording) {
-              try {
-                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                mediaRecorder = new MediaRecorder(stream);
-                audioChunks = [];
-                mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
-                mediaRecorder.onstop = sendAudio;
-                mediaRecorder.start();
-                isRecording = true;
-                btn.classList.add("recording");
-                btn.innerHTML = "<span style='font-size:24px'>⏹️</span><span>PARAR</span>";
-                showStatus("loading", "🔴 Ouvindo...");
-              } catch (e) { alert("Erro microfone: " + e.message); }
-            } else {
-              mediaRecorder.stop();
-              isRecording = false;
-              btn.classList.remove("recording");
-              btn.innerHTML = "<span style='font-size:24px'>🎙️</span><span>GRAVAR</span>";
-              showStatus("loading", "⏳ Processando áudio...");
+          // --- ÁUDIO (PATCH 32D: gravação via ponte externa, fora do iframe sandboxed) ---
+          // Motivo: getUserMedia() é bloqueado pelo Google dentro do iframe do
+          // Apps Script (Permissions Policy não inclui "microphone"). Solução
+          // oficial do Google: abrir um domínio externo top-level e devolver
+          // o áudio via postMessage. Ver cabeçalho do arquivo para histórico completo.
+          const MIC_BRIDGE_URL = "${MIC_BRIDGE_URL}";
+          let micPopup = null;
+
+          function openMicBridge() {
+            const returnOrigin = window.location.origin;
+            const bridgeUrl = MIC_BRIDGE_URL + (MIC_BRIDGE_URL.indexOf('?') >= 0 ? '&' : '?') + 'origin=' + encodeURIComponent(returnOrigin);
+
+            micPopup = window.open(bridgeUrl, 'GFP_MIC', 'width=380,height=560');
+
+            if (!micPopup) {
+              showStatus("error", "❌ O navegador bloqueou o popup de gravação. Permita popups para este site e tente de novo.");
+              return;
             }
+            showStatus("loading", "🎙️ Abrindo gravador em nova janela...");
           }
-          
-          function sendAudio() {
-            const blob = new Blob(audioChunks, { type: 'audio/mp4' });
-            const reader = new FileReader();
-            reader.readAsDataURL(blob);
-            reader.onloadend = () => {
-              const base64 = reader.result.split(',')[1];
-              google.script.run.withSuccessHandler(onSuccess).withFailureHandler(onError)
-                .processAudio(base64, blob.type, USUARIO); 
-            };
-          }
+
+          window.addEventListener('message', function (event) {
+            if (!event.data || event.data.type !== 'GFP_AUDIO_RESULT') return;
+            // Aceita apenas mensagens vindas da própria ponte (origem do MIC_BRIDGE_URL)
+            try {
+              const bridgeOrigin = new URL(MIC_BRIDGE_URL).origin;
+              if (event.origin !== bridgeOrigin) return;
+            } catch (e) { /* se MIC_BRIDGE_URL ainda não foi configurada, segue sem checagem extra */ }
+
+            if (event.data.error) {
+              showStatus("error", "❌ Erro na gravação: " + event.data.error);
+              return;
+            }
+
+            showStatus("loading", "⏳ Processando áudio...");
+            google.script.run.withSuccessHandler(onSuccess).withFailureHandler(onError)
+              .processAudio(event.data.base64, event.data.mime || 'audio/mp4', USUARIO);
+          });
 
           // --- FOTO (COM COMPRESSÃO) ---
           function handleImageUpload(input) {
